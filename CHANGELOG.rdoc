@@ -1,0 +1,10 @@
+
+== 0.9
+
+Rack middleware implementation is feature-complete and has major spec coverage. Rails integration
+is untested and may contain bugs.
+
+=== 0.9.0 (2010-12-22)
+
+* Initial commit ported from 'rack' branch of old has_global_session project
+

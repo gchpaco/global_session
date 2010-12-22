@@ -1,0 +1,49 @@
+# Common settings of the global session (that apply to all Rails environments)
+# are listed here. These may be overidden in the environment-specific section.
+common:
+  attributes:
+    # Signed attributes of the global session
+    signed:
+    - user
+    # Untrusted attributes of the global session
+    insecure:
+    - account
+  # Enable local session integration in order to use the ActionController
+  # method #session to access both local AND global session state, with
+  # global attributes always taking precedence over local attributes.
+  integrated: true
+  ephemeral: false
+  
+# Test/spec runs
+test:
+  timeout: 15 #minutes
+  renew: 5 #minutes before expiration
+  cookie:
+    name: _session_gbl
+  #the name of the local authority (optional)
+  authority: test
+  #which authorities this app will trust
+  trust:
+  - test
+
+# Development mode
+development:
+  timeout: 60
+  renew: 15
+  cookie:
+    name: _session_gbl
+  authority: development
+  trust:
+  - development
+  - production
+
+# Production mode
+production:
+  timeout: 60
+  renew: 15
+  cookie:
+    name: _session_gbl
+    domain: <%= app_domain %>
+  authority: production
+  trust:
+  - production
