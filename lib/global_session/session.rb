@@ -111,6 +111,8 @@ module GlobalSession
       @signed.has_key?(key) || @insecure.has_key?(key)
     end
 
+    alias :key? :has_key?
+    
     # Return the keys that are currently present in the global session.
     #
     # === Return

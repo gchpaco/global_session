@@ -78,6 +78,8 @@ module GlobalSession
       @global.has_key?(key) || @local.has_key?(key)
     end
 
+    alias :key? :has_key?
+    
     # Return the keys that are currently present in either the global or local session.
     #
     # === Return

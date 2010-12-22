@@ -52,7 +52,7 @@ module GlobalSession
       # === Parameters
       # env(Hash): Rack environment.
       def read_cookie(env)
-        if env['rack.cookies'].key?(@cookie_name)
+        if env['rack.cookies'].has_key?(@cookie_name)
           env['global_session'] = Session.new(@directory,
                                               env['rack.cookies'][@cookie_name])
         elsif @cookie_retrieval && cookie = @cookie_retrieval.call(env)
@@ -89,7 +89,7 @@ module GlobalSession
           if env['global_session'] && env['global_session'].valid?
             value = env['global_session'].to_s
             expires = @configuration['ephemeral'] ? nil : env['global_session'].expired_at
-            unless env['rack.cookies'].key?(@cookie_name) &&
+            unless env['rack.cookies'].has_key?(@cookie_name) &&
                 env['rack.cookies'][@cookie_name] == value
               env['rack.cookies'][@cookie_name] = {:value => value, :domain => domain, :expires => expires}
             end
@@ -158,5 +158,5 @@ module GlobalSession
 end
 
 module Rack
-  GlobalSession = GlobalSession::Rack::Middleware unless defined?(GlobalSession)
+  GlobalSession = ::GlobalSession::Rack::Middleware unless defined?(::Rack::GlobalSession)
 end
