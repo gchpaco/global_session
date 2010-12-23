@@ -69,9 +69,10 @@ module GlobalSession
       # === Parameters
       # env(Hash): Rack environment
       def renew_cookie(env)
+        return unless env['global_session'].directory.local_authority_name
+        return if env['global_session.req.renew'] == false
+        
         if (renew = @configuration['renew']) && env['global_session'] &&
-            env['global_session.req.renew'] != false &&
-            env['global_session'].directory.local_authority_name &&
             env['global_session'].expired_at < Time.at(Time.now.utc + 60 * renew.to_i)
           env['global_session'].renew!
         end
@@ -82,6 +83,7 @@ module GlobalSession
       # === Parameters
       # env(Hash): Rack environment
       def update_cookie(env)
+        return unless env['global_session'].directory.local_authority_name
         return if env['global_session.req.update'] == false
 
         begin
@@ -103,7 +105,7 @@ module GlobalSession
         end
       end
 
-      # Delete the ticket from the cookie jar.
+      # Delete the global session cookie from the cookie jar.
       #
       # === Parameters
       # env(Hash): Rack environment
