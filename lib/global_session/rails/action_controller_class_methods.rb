@@ -47,8 +47,6 @@ module GlobalSession
         before_filter :global_session_skip_update
       end
 
-      protected
-
       def global_session_options
         @global_session_options || {}
       end

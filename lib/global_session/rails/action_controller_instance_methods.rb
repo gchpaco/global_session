@@ -27,7 +27,7 @@ module GlobalSession
       end
 
       def global_session_options
-        self.class.instance_variable_get(:@global_session_options)
+        self.class.global_session_options || {}
       end
 
       # Global session reader.
@@ -63,7 +63,7 @@ module GlobalSession
       # === Return
       # true:: Always returns true
       def global_session_initialize
-        options = self.class.instance_variable_get(:@global_session_options) || {}
+        options = global_session_options
 
         if (error = request.env['global_session.error'])
           raise error unless options[:raise] == false

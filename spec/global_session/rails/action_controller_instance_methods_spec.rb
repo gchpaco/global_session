@@ -26,8 +26,8 @@ end
 # Normally this would be accomplished via the "has_global_session" class method of
 # ActionController::Base, but we want to avoid the configuration-related madness.
 class StubController < ActionController::Base
-  include GlobalSession::Rails::ActionControllerInstanceMethods
-
+  has_global_session
+  
   def initialize(env={}, cookies={}, local_session={}, params={})
     super()
 
@@ -61,8 +61,8 @@ describe GlobalSession::Rails::ActionControllerInstanceMethods do
 
     ActionController::Base.global_session_config = mock_config
 
-    @directory        = Directory.new(mock_config, @keystore.dir)
-    @original_session = Session.new(@directory)
+    @directory        = GlobalSession::Directory.new(mock_config, @keystore.dir)
+    @original_session = GlobalSession::Session.new(@directory)
     @cookie           = @original_session.to_s
 
     @controller = StubController.new( {'global_session'=>@original_session}, 
@@ -76,29 +76,31 @@ describe GlobalSession::Rails::ActionControllerInstanceMethods do
   end
 
   context :global_session_initialize do
-    context 'when no session exists in the Rack env' do
-      it 'should initialize a new session'
-    end
-
-    context 'when a trusted signature is cached' do
-      it 'should not revalidate the signature'      
-    end
-
-    context 'when no trusted signature is cached' do
-      it 'should revalidate the signature'
-    end
-
     context 'when an exception is raised' do
-      it 'should create a new session, update the cookie, and re-raise'
+      before(:each) do
+        @controller.request.env['global_session.error'] = GlobalSession::ExpiredSession.new("moo!")        
+      end
+
+      it 'should create a new session, update the cookie, and re-raise' do
+        lambda {
+          @controller.global_session_initialize
+        }.should raise_error(GlobalSession::ExpiredSession)
+      end
     end
   end
 
   context :global_session_skip_update do
-    it 'should work as expected'
+    it 'should set the appropriate Rack env' do
+      @controller.global_session_skip_update
+      @controller.request.env['global_session.req.update'].should be_false
+    end
   end
 
   context :global_session_skip_renew do
-    it 'should work as expected'
+    it 'should set the appropriate Rack env' do
+      @controller.global_session_skip_renew
+      @controller.request.env['global_session.req.renew'].should be_false
+    end
   end
 
   context :session_with_global_session do
@@ -118,14 +120,14 @@ describe GlobalSession::Rails::ActionControllerInstanceMethods do
       end
 
       it 'should return an integrated session' do
-        IntegratedSession.should === @controller.session
+        GlobalSession::IntegratedSession.should === @controller.session
       end
     end
     context 'when the global session has been reset' do
       before(:each) do
         @controller.global_session_initialize
         @old_integrated_session = @controller.session
-        IntegratedSession.should === @old_integrated_session
+        GlobalSession::IntegratedSession.should === @old_integrated_session
         @controller.instance_variable_set(:@global_session, 'new global session')
       end
 
@@ -137,7 +139,7 @@ describe GlobalSession::Rails::ActionControllerInstanceMethods do
       before(:each) do
         @controller.global_session_initialize
         @old_integrated_session = @controller.session
-        IntegratedSession.should === @old_integrated_session
+        GlobalSession::IntegratedSession.should === @old_integrated_session
         @controller.request.session = 'new local session'
       end
 

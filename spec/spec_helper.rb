@@ -11,6 +11,7 @@ require 'global_session'
 # Setup Rails (for Rails integration specs)
 gem 'actionpack', '>= 2.1.2'
 require 'action_controller'
+
 require 'global_session/rails'
 
 # Enable ActionController integration with Rails. Since we're not actually activating

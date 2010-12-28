@@ -1,8 +1,6 @@
 require File.expand_path(File.join(File.dirname(__FILE__), '..' , 'spec_helper'))
 
-include GlobalSession
-
-describe Session do
+describe GlobalSession::Session do
   include SpecHelper
 
   before(:all) do
@@ -30,14 +28,14 @@ describe Session do
     before(:each) do
       mock_config('test/trust', ['authority1'])
       mock_config('test/authority', 'authority1')
-      @directory        = Directory.new(mock_config, @keystore.dir)
-      @original_session = Session.new(@directory)
+      @directory        = GlobalSession::Directory.new(mock_config, @keystore.dir)
+      @original_session = GlobalSession::Session.new(@directory)
       @cookie           = @original_session.to_s
     end
 
     context 'when everything is copascetic' do
       it 'should succeed' do
-        Session.should === Session.new(@directory, @cookie)
+        GlobalSession::Session.should === GlobalSession::Session.new(@directory, @cookie)
       end
     end
 
@@ -45,38 +43,38 @@ describe Session do
       it 'should not recompute the signature' do
         flexmock(@directory.authorities['authority1']).should_receive(:public_decrypt).never
         valid_digest = @original_session.signature_digest
-        Session.should === Session.new(@directory, @cookie, valid_digest)
+        GlobalSession::Session.should === GlobalSession::Session.new(@directory, @cookie, valid_digest)
       end
     end
 
     context 'when an insecure attribute has changed' do
       before do
-        zbin = Encoding::Base64Cookie.load(@cookie)
+        zbin = GlobalSession::Encoding::Base64Cookie.load(@cookie)
         json = Zlib::Inflate.inflate(zbin)
-        hash = Encoding::JSON.load(json)
+        hash = GlobalSession::Encoding::JSON.load(json)
         hash['dx'] = {'favorite_color' => 'blue'}
-        json = Encoding::JSON.dump(hash)
+        json = GlobalSession::Encoding::JSON.dump(hash)
         zbin = Zlib::Deflate.deflate(json, Zlib::BEST_COMPRESSION)
-        @cookie = Encoding::Base64Cookie.dump(zbin)        
+        @cookie = GlobalSession::Encoding::Base64Cookie.dump(zbin)        
       end
       it 'should succeed' do
-        Session.should === Session.new(@directory, @cookie)
+        GlobalSession::Session.should === GlobalSession::Session.new(@directory, @cookie)
       end
     end
 
     context 'when a secure attribute has been tampered with' do
       before do
-        zbin = Encoding::Base64Cookie.load(@cookie)
+        zbin = GlobalSession::Encoding::Base64Cookie.load(@cookie)
         json = Zlib::Inflate.inflate(zbin)
-        hash = Encoding::JSON.load(json)
+        hash = GlobalSession::Encoding::JSON.load(json)
         hash['ds'] = {'evil_haxor' => 'mwahaha'}
-        json = Encoding::JSON.dump(hash)
+        json = GlobalSession::Encoding::JSON.dump(hash)
         zbin = Zlib::Deflate.deflate(json, Zlib::BEST_COMPRESSION)
-        @cookie = Encoding::Base64Cookie.dump(zbin)        
+        @cookie = GlobalSession::Encoding::Base64Cookie.dump(zbin)        
       end
       it 'should raise SecurityError' do
         lambda {
-          Session.new(@directory, @cookie)
+          GlobalSession::Session.new(@directory, @cookie)
         }.should raise_error(SecurityError)
       end
     end
@@ -85,14 +83,14 @@ describe Session do
       before do
         mock_config('test/trust', ['authority1'])
         mock_config('test/authority', 'authority1')
-        @directory2 = Directory.new(mock_config, @keystore.dir)
-        @cookie = Session.new(@directory2).to_s
+        @directory2 = GlobalSession::Directory.new(mock_config, @keystore.dir)
+        @cookie = GlobalSession::Session.new(@directory2).to_s
         mock_config('test/trust', ['authority2'])
         mock_config('test/authority', nil)        
       end
       it 'should raise SecurityError' do
         lambda {
-          Session.new(@directory, @cookie)
+          GlobalSession::Session.new(@directory, @cookie)
         }.should raise_error(SecurityError)
       end
     end
@@ -104,14 +102,14 @@ describe Session do
       end
       it 'should raise ExpiredSession' do
         lambda {
-          Session.new(@directory, @cookie)
-        }.should raise_error(ExpiredSession)
+          GlobalSession::Session.new(@directory, @cookie)
+        }.should raise_error(GlobalSession::ExpiredSession)
       end
     end
 
     context 'when an empty cookie is supplied' do
       it 'should create a new valid session' do
-        Session.new(@directory, '').valid?.should be_true
+        GlobalSession::Session.new(@directory, '').valid?.should be_true
       end
 
       context 'and there is no local authority' do
@@ -121,7 +119,7 @@ describe Session do
         end
 
         it 'should create a new invalid session' do
-          Session.new(@directory, '').valid?.should be_false
+          GlobalSession::Session.new(@directory, '').valid?.should be_false
         end
       end
     end
@@ -132,7 +130,7 @@ describe Session do
       bad_cookies.each do |cookie|
         it 'should cope' do
           lambda {
-            Session.new(@directory, cookie)
+            GlobalSession::Session.new(@directory, cookie)
           }.should raise_error(GlobalSession::MalformedCookie)
         end
       end

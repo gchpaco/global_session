@@ -1,14 +1,12 @@
 require File.expand_path(File.join(File.dirname(__FILE__), '..' , 'spec_helper'))
 
-include GlobalSession
-
-describe IntegratedSession do
+describe GlobalSession::IntegratedSession do
   include SpecHelper
 
   before(:each) do
     @global  = flexmock('Global Session')
     @local   = flexmock('Local Session')
-    @session = IntegratedSession.new(@local, @global)
+    @session = GlobalSession::IntegratedSession.new(@local, @global)
   end
   
   context :[] do

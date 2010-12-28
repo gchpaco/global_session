@@ -12,7 +12,7 @@ module GlobalSession
   # When using an integrated session, you can always get to the underlying objects by
   # using the #local and #global readers of this class.
   #
-  class IntegratedSession
+  class GlobalSession::IntegratedSession
     # Return the local-session objects, whose type may vary depending on the Web framework.
     attr_reader :local
 
