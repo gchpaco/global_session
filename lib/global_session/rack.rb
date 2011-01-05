@@ -114,7 +114,9 @@ module GlobalSession
         env['rack.cookies'][@cookie_name] = {:value => nil, :domain => domain, :expires => Time.at(0)}
       end
 
-      # Handle exceptions that occur during app invocation.
+      # Handle exceptions that occur during app invocation. This will either save the error
+      # in the Rack environment or raise it, depending on the type of error. The error may
+      # also be logged.
       #
       # === Parameters
       # activity(String): name of activity in which error happened
@@ -123,11 +125,9 @@ module GlobalSession
       def handle_error(activity, env, e)
         if e.is_a? ClientError
           env['global_session.error'] = e
-          return @app.call(env)
         elsif e.is_a? ConfigurationError
           env['rack.logger'].error("#{e.class} while #{activity}: #{e} #{e.backtrace}") if env['rack.logger']
           env['global_session.error'] = e
-          return @app.call(env)
         else
           raise e
         end
@@ -142,17 +142,21 @@ module GlobalSession
           read_cookie(env)
         rescue Exception => e
           env['global_session'] = Session.new(@directory)
-          return handle_error('reading session cookie', env, e)
+          handle_error('reading session cookie', env, e)
         end
 
+        tuple = nil
+        
         begin
           tuple = @app.call(env)
+        rescue Exception => e
+          wipe_cookie(env)
+          handle_error('processing request', env, e)
+          return tuple
+        else
           renew_cookie(env)
           update_cookie(env)
           return tuple
-        rescue Exception => e
-          wipe_cookie(env)
-          return handle_error('processing request', env, e)
         end
       end
     end
