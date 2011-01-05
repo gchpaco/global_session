@@ -1,42 +1,5 @@
 require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'spec_helper'))
 
-class StubRequest
-  attr_reader :env, :cookies, :params
-  attr_accessor :session
-
-  def initialize(env, cookies, params, local_session={})
-    @env     = env
-    @cookies = cookies
-    @params  = params
-    @session = local_session
-  end
-end
-
-class StubResponse
-  def initialize(cookies)
-    @cookies = cookies
-  end
-
-  def set_cookie(key, hash)
-    @cookies[key] = hash[:value]
-  end
-end
-
-# Stub controller into which we manually wire the GlobalSession instance methods.
-# Normally this would be accomplished via the "has_global_session" class method of
-# ActionController::Base, but we want to avoid the configuration-related madness.
-class StubController < ActionController::Base
-  has_global_session
-  
-  def initialize(env={}, cookies={}, local_session={}, params={})
-    super()
-
-    self.request  = StubRequest.new(env, cookies, params)
-    self.response = StubResponse.new(cookies)
-    @_session = local_session
-  end
-end
-
 describe GlobalSession::Rails::ActionControllerInstanceMethods do
   include SpecHelper
 

@@ -8,7 +8,7 @@ spec = Gem::Specification.new do |s|
 
   s.name    = 'global_session'
   s.version = '1.0.0'
-  s.date    = '2010-12-07'
+  s.date    = '2011-01-01'
 
   s.authors = ['Tony Spataro']
   s.email   = 'code@tracker.xeger.net'

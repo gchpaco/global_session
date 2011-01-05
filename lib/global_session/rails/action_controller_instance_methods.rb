@@ -65,12 +65,24 @@ module GlobalSession
       def global_session_initialize
         options = global_session_options
 
-        if (error = request.env['global_session.error'])
-          raise error unless options[:raise] == false
-        else
-          @global_session = request.env['global_session']
-          return true
+        if options[:only] && !options[:only].include?(action_name)
+          should_skip = true
+        elsif options[:except] && options[:except].include?(action_name)
+          should_skip = true
+        elsif !options[:enabled]
+          should_skip = true
         end
+
+        if should_skip
+          request.env['global_session.req.renew'] = false
+          request.env['global_session.req.update'] = false
+        else
+          error = request.env['global_session.error']
+          raise error unless error.nil? || options[:raise] == false
+          @global_session = request.env['global_session']
+        end
+
+        return true
       end
 
       # Filter to disable auto-renewal of the session.

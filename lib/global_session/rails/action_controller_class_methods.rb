@@ -20,31 +20,18 @@ module GlobalSession
         odefault = {:integrated=>false}
         obase = self.superclass.global_session_options if self.superclass.respond_to?(:global_session_options)
         options = odefault.merge(obase).merge(options)
-        
-        self.global_session_options = HashWithIndifferentAccess.new(options)
-        options = self.global_session_options
+        options.delete(:only) if obase.has_key?(:only) && options.has_key?(:except)
+        options.delete(:except) if obase.has_key?(:except) && options.has_key?(:only)
+        options[:enabled] = true
 
+        self.global_session_options = options
         include GlobalSession::Rails::ActionControllerInstanceMethods
-
-        fopt = {}
-        inverse_fopt = {}
-        fopt[:only] = options[:only] if options[:only]
-        fopt[:except] = options[:except] if options[:except]
-        inverse_fopt[:only] = options[:except] if options[:except]
-        inverse_fopt[:except] = options[:only] if options[:only]
-
-        if fopt[:only] || fopt[:except]
-          before_filter :global_session_skip_renew, inverse_fopt
-          before_filter :global_session_skip_update, inverse_fopt
-        end
-
-        before_filter :global_session_initialize, fopt
+        before_filter :global_session_initialize
       end
 
       def no_global_session
+        self.global_session_options[:enabled] = false
         skip_before_filter :global_session_initialize
-        before_filter :global_session_skip_renew
-        before_filter :global_session_skip_update
       end
 
       def global_session_options
