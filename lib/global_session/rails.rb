@@ -1,7 +1,7 @@
 basedir = File.dirname(__FILE__)
 
 require 'rack/contrib/cookies'
-require 'actionpack'
+require 'action_pack'
 require 'action_controller'
 
 #Require the files necessary for Rails integration

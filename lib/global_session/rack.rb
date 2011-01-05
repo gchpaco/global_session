@@ -125,6 +125,7 @@ module GlobalSession
       def handle_error(activity, env, e)
         if e.is_a? ClientError
           env['global_session.error'] = e
+          wipe_cookie(env)
         elsif e.is_a? ConfigurationError
           env['rack.logger'].error("#{e.class} while #{activity}: #{e} #{e.backtrace}") if env['rack.logger']
           env['global_session.error'] = e
@@ -150,7 +151,6 @@ module GlobalSession
         begin
           tuple = @app.call(env)
         rescue Exception => e
-          wipe_cookie(env)
           handle_error('processing request', env, e)
           return tuple
         else

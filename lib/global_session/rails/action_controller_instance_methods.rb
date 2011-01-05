@@ -15,7 +15,10 @@ module GlobalSession
     #
     module ActionControllerInstanceMethods
       def self.included(base) # :nodoc:
-        base.alias_method_chain :session, :global_session
+        #Make sure a superclass hasn't already chained the methods...
+        unless base.instance_methods.include?("session_without_global_session")
+          base.alias_method_chain :session, :global_session
+        end
       end
 
       # Shortcut accessor for global session configuration object.
@@ -27,7 +30,7 @@ module GlobalSession
       end
 
       def global_session_options
-        self.class.global_session_options || {}
+        self.class.global_session_options
       end
 
       # Global session reader.
