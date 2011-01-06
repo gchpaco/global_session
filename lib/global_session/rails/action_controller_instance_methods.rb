@@ -47,7 +47,7 @@ module GlobalSession
       # === Return
       # session(IntegratedSession):: the integrated session
       def session_with_global_session
-        if global_session
+        if global_session_options[:integrated] && global_session
           unless @integrated_session &&
                  (@integrated_session.local == session_without_global_session) && 
                  (@integrated_session.global == global_session)
