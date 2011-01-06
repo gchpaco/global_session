@@ -16,8 +16,13 @@ require 'global_session/rails'
 
 # Enable ActionController integration with Rails. Since we're not actually activating
 # the Rails plugin, we need to do this ourselves.
+# Enable ActionController integration.
 class <<ActionController::Base
   include GlobalSession::Rails::ActionControllerClassMethods
+end
+
+ActionController::Base.instance_eval do
+  include GlobalSession::Rails::ActionControllerInstanceMethods
 end
 
 Spec::Runner.configure do |config|

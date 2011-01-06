@@ -32,7 +32,6 @@ module GlobalSession
         options[:enabled] = true
         self.global_session_options = options
 
-        include GlobalSession::Rails::ActionControllerInstanceMethods
         before_filter :global_session_initialize
       end
 

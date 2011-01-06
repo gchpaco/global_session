@@ -17,6 +17,10 @@ module GlobalSession
         include GlobalSession::Rails::ActionControllerClassMethods
       end
 
+      ActionController::Base.instance_eval do
+        include GlobalSession::Rails::ActionControllerInstanceMethods
+      end
+
       authorities = File.join(::Rails.root, 'config', 'authorities')
       hgs_config  = ActionController::Base.global_session_config
       hgs_dir     = GlobalSession::Directory.new(hgs_config, authorities)
