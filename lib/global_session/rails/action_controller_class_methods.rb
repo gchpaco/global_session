@@ -18,7 +18,7 @@ module GlobalSession
       end
 
       def has_global_session(options={})
-        odefault = {:integrated=>false}
+        odefault = {:integrated=>false, :raise=>true}
         obase = self.superclass.global_session_options if self.superclass.respond_to?(:global_session_options)
         obase ||= {}
         options = odefault.merge(obase).merge(options)

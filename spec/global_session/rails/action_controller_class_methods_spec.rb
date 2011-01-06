@@ -28,11 +28,7 @@ describe GlobalSession::Rails::ActionControllerClassMethods do
   end
 
   context :has_global_session do
-    it 'should respond' do
-      @klass.should respond_to(:has_global_session)
-    end
-
-    it 'should use sensible defaults' do
+    it 'should enable the global session' do
       @klass.has_global_session
       @controller = @klass.new( @env, {}, {}, {:action=>:index} )
       @controller.process({})
@@ -41,6 +37,11 @@ describe GlobalSession::Rails::ActionControllerClassMethods do
       @controller2 = @klass.new( {}, {}, {}, {:action=>:show} )
       @controller2.process({})
       @controller.global_session.should_not be_nil
+    end
+
+    it 'should use sensible defaults' do
+      @klass.global_session_options[:integrated].should be_false
+      @klass.global_session_options[:raise].should be_true
     end
 
     it 'should honor :only' do
@@ -66,6 +67,26 @@ describe GlobalSession::Rails::ActionControllerClassMethods do
       @controller2.process({})
       @controller2.global_session.should_not be_nil
     end
+  end
+
+  context 'with inheritance' do
+    it 'should inherit options from the base class'
+
+    it 'should allow derived-class options to override base-class options'
+
+    it 'should handle a child class that overrides :except with :only' do
+      @parent = Class.new(StubController) do
+        has_global_session(:except=>[:index])
+      end
+
+      @child = Class.new(@parent) do
+        has_global_session(:only=>[:index, :show])
+      end
+
+      @controller2 = @child.new( @env, {}, {}, {:action=>:index} )
+      @controller2.process({})
+      @controller2.global_session.should_not be_nil
+    end
 
     it 'should handle a child class that overrides :only with :except' do
       @parent = Class.new(StubController) do
@@ -80,19 +101,5 @@ describe GlobalSession::Rails::ActionControllerClassMethods do
       @controller2.process({})
       @controller2.global_session.should be_nil
     end
-  end
-
-  it 'should handle a child class that overrides :except with :only' do
-    @parent = Class.new(StubController) do
-      has_global_session(:except=>[:index])
-    end
-
-    @child = Class.new(@parent) do
-      has_global_session(:only=>[:index, :show])
-    end
-
-    @controller2 = @child.new( @env, {}, {}, {:action=>:index} )
-    @controller2.process({})
-    @controller2.global_session.should_not be_nil
   end
 end

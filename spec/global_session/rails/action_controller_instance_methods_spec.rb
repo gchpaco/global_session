@@ -28,7 +28,11 @@ describe GlobalSession::Rails::ActionControllerInstanceMethods do
     @original_session = GlobalSession::Session.new(@directory)
     @cookie           = @original_session.to_s
 
-    @controller = StubController.new( {'global_session'=>@original_session}, 
+    @klass = Class.new(StubController) do
+      has_global_session :integrated=>true
+    end
+
+    @controller = @klass.new( {'global_session'=>@original_session}, 
                                       {'global_session_cookie'=>@cookie} )
     flexmock(@controller).should_receive(:global_session_create_directory).and_return(@directory)
   end
