@@ -9,18 +9,18 @@ require 'global_session/rack'
 require 'global_session/rails/action_controller_class_methods'
 require 'global_session/rails/action_controller_instance_methods'
 
+# Enable ActionController integration.
+class <<ActionController::Base
+  include GlobalSession::Rails::ActionControllerClassMethods
+end
+
+ActionController::Base.instance_eval do
+  include GlobalSession::Rails::ActionControllerInstanceMethods
+end
+
 module GlobalSession
   module Rails
     def self.activate(config)
-      # Enable ActionController integration.
-      class <<ActionController::Base
-        include GlobalSession::Rails::ActionControllerClassMethods
-      end
-
-      ActionController::Base.instance_eval do
-        include GlobalSession::Rails::ActionControllerInstanceMethods
-      end
-
       authorities = File.join(::Rails.root, 'config', 'authorities')
       hgs_config  = ActionController::Base.global_session_config
       hgs_dir     = GlobalSession::Directory.new(hgs_config, authorities)

@@ -61,3 +61,9 @@ require File.join(basedir, 'global_session', 'directory')
 require File.join(basedir, 'global_session', 'encoding')
 require File.join(basedir, 'global_session', 'session')
 require File.join(basedir, 'global_session', 'integrated_session')
+
+#Preemptively try to activate the Rails plugin, ignoring errors
+begin
+  require File.join(basedir, 'global_session', 'rails')  
+rescue Exception => e
+end

@@ -8,10 +8,8 @@ common:
     # Untrusted attributes of the global session
     insecure:
     - account
-  # Enable local session integration in order to use the ActionController
-  # method #session to access both local AND global session state, with
-  # global attributes always taking precedence over local attributes.
-  integrated: true
+  #If the session cookie is ephemeral, it goes away when the user closes the browser.
+  #Otherwise it stays around
   ephemeral: false
   
 # Test/spec runs
@@ -19,7 +17,7 @@ test:
   timeout: 15 #minutes
   renew: 5 #minutes before expiration
   cookie:
-    name: _session_gbl
+    name: global_session
   #the name of the local authority (optional)
   authority: test
   #which authorities this app will trust
@@ -31,7 +29,7 @@ development:
   timeout: 60
   renew: 15
   cookie:
-    name: _session_gbl
+    name: global_session
   authority: development
   trust:
   - development
@@ -42,7 +40,7 @@ production:
   timeout: 60
   renew: 15
   cookie:
-    name: _session_gbl
+    name: global_session
     domain: <%= app_domain %>
   authority: production
   trust:

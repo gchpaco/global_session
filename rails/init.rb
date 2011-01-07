@@ -1,3 +1,2 @@
-#
-# Empty placeholder file so Rails 2.x will recognize us as a plugin
-#
+require 'global_session'
+require 'global_session/rails'

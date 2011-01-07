@@ -4,7 +4,7 @@ class GlobalSessionAuthorityGenerator < Rails::Generator::Base
 
     @app_name  = File.basename(::Rails.root)
     @auth_name = args.shift
-    raise ArgumentError, "Must specify name for global session authority, e.g. 'mycoolapp'" unless @auth_name
+    raise ArgumentError, "Must specify name for global session authority, e.g. 'prod'" unless @auth_name
   end
 
   def manifest
