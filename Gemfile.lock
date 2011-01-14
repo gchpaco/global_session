@@ -1,12 +1,13 @@
 PATH
   remote: .
   specs:
-    has_global_session (2.0.0)
+    global_session (1.0.0)
       json (>= 1.1.7)
       rack-contrib (>= 1.0)
       uuidtools (>= 1.0.7)
 
 GEM
+  remote: http://rubygems.org/
   specs:
     actionpack (2.3.5)
       activesupport (= 2.3.5)
@@ -34,7 +35,7 @@ PLATFORMS
 DEPENDENCIES
   actionpack (>= 2.1.2)
   flexmock (>= 0.8.6)
-  has_global_session!
+  global_session!
   json (>= 1.1.7)
   rack-contrib (>= 1.0)
   rake (~> 0.8.7)

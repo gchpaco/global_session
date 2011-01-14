@@ -1,4 +1,4 @@
-basedir = File.dirname(__FILE__)
+require File.expand_path(File.join(File.dirname(__FILE__), "..", "global_session"))
 
 # Make sure the namespace exists, to satisfy Rails auto-loading
 module GlobalSession
@@ -71,7 +71,7 @@ module GlobalSession
       def renew_cookie(env)
         return unless env['global_session'].directory.local_authority_name
         return if env['global_session.req.renew'] == false
-        
+
         if (renew = @configuration['renew']) && env['global_session'] &&
             env['global_session'].expired_at < Time.at(Time.now.utc + 60 * renew.to_i)
           env['global_session'].renew!
@@ -147,7 +147,7 @@ module GlobalSession
         end
 
         tuple = nil
-        
+
         begin
           tuple = @app.call(env)
         rescue Exception => e

@@ -1,11 +1,9 @@
-basedir = File.expand_path(File.join(File.dirname(__FILE__), '..'))
-$: << File.join(basedir, 'lib')
-
-require 'tempfile'
-
 require 'rubygems'
+$:.unshift(File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib')))
+require 'bundler/setup'
+require 'spec'
+require 'tempfile'
 require 'flexmock'
-
 require 'global_session'
 
 # Setup Rails (for Rails integration specs)
@@ -17,7 +15,7 @@ require 'global_session/rails'
 # Enable ActionController integration with Rails. Since we're not actually activating
 # the Rails plugin, we need to do this ourselves.
 # Enable ActionController integration.
-class <<ActionController::Base
+class << ActionController::Base
   include GlobalSession::Rails::ActionControllerClassMethods
 end
 
@@ -75,7 +73,7 @@ end
 
 class StubResponse
   attr_accessor :body, :content_type, :status
-  
+
   def initialize(cookies)
     @cookies = cookies
   end

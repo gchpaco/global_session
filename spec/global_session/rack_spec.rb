@@ -1,6 +1,51 @@
 require File.expand_path(File.join(File.dirname(__FILE__), '..', 'spec_helper'))
 
 require 'global_session/rack'
+require 'tempfile'
+
+describe GlobalSession::Rack::Middleware do
+  include SpecHelper
+
+  before(:all) do
+    @keystore = KeyFactory.new
+    @keystore.create('authority1', true)
+    @keystore.create('authority2', false)
+  end
+
+  after(:all) do
+    @keystore.destroy
+  end
+
+  before(:each) do
+    @config = Tempfile.new("config")
+    @config << <<EOS
+common:
+  attributes:
+    signed: [user]
+    insecure: [favorite_color]
+  timeout: 60
+  cookie:
+    name: global_session_cookie
+  trust: [authority1]
+  authority: authority1
+EOS
+    @config.close
+  end
+
+  after(:each) do
+    @config.close(true)
+    @keystore.reset
+  end
+
+  context :initialization do
+    it 'can initialize from files' do
+      @null_app = flexmock('Rack App')
+      @null_app.should_receive(:call).once.by_default
+      @app = GlobalSession::Rack::Middleware.new(@null_app, @config.path, @keystore.dir)
+      @app.call({})
+    end
+  end
+end
 
 describe GlobalSession::Rack::Middleware do
   include SpecHelper
@@ -29,7 +74,7 @@ describe GlobalSession::Rack::Middleware do
     @app = GlobalSession::Rack::Middleware.new(@null_app, @config, @directory)
     @env = {'rack.cookies' => {}}
   end
-  
+
   after(:each) do
     @keystore.reset
     reset_mock_config
@@ -45,12 +90,12 @@ describe GlobalSession::Rack::Middleware do
       end
 
       it 'should not renew the cookie' do
-        @app.call(@env)  
+        @app.call(@env)
         @env.should have_key('global_session')
         @env['global_session'].to_s.should == @cookie
       end
     end
-    
+
     context 'when session is about to expire' do
       before(:each) do
         @original_session = GlobalSession::Session.new(@directory)
