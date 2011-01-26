@@ -123,7 +123,7 @@ module GlobalSession
       # env(Hash): Rack environment
       # e(Exception): error that happened
       def handle_error(activity, env, e)
-        if e.is_a? ClientError
+        if e.is_a?(ClientError) || e.is_a?(SecurityError)
           env['global_session.error'] = e
           wipe_cookie(env)
         elsif e.is_a? ConfigurationError
