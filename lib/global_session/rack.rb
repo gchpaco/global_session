@@ -47,6 +47,34 @@ module GlobalSession
         @cookie_name = @configuration['cookie']['name']
       end
 
+      # Rack request chain. Sets up the global session ticket from
+      # the environment and passes it up the chain.
+      def call(env)
+        env['rack.cookies'] = {} unless env['rack.cookies']
+
+        begin
+          read_cookie(env)
+        rescue Exception => e
+          env['global_session'] = Session.new(@directory)
+          handle_error('reading session cookie', env, e)
+        end
+
+        tuple = nil
+
+        begin
+          tuple = @app.call(env)
+        rescue Exception => e
+          handle_error('processing request', env, e)
+          return tuple
+        else
+          renew_cookie(env)
+          update_cookie(env)
+          return tuple
+        end
+      end
+
+      protected
+      
       # Read a cookie from the Rack environment.
       #
       # === Parameters
@@ -135,32 +163,6 @@ module GlobalSession
           env['global_session.error'] = e
         else
           raise e
-        end
-      end
-
-      # Rack request chain. Sets up the global session ticket from
-      # the environment and passes it up the chain.
-      def call(env)
-        env['rack.cookies'] = {} unless env['rack.cookies']
-
-        begin
-          read_cookie(env)
-        rescue Exception => e
-          env['global_session'] = Session.new(@directory)
-          handle_error('reading session cookie', env, e)
-        end
-
-        tuple = nil
-
-        begin
-          tuple = @app.call(env)
-        rescue Exception => e
-          handle_error('processing request', env, e)
-          return tuple
-        else
-          renew_cookie(env)
-          update_cookie(env)
-          return tuple
         end
       end
     end

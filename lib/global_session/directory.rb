@@ -29,7 +29,7 @@ module GlobalSession
   # at initialization time.
   #
   class Directory
-    attr_reader :configuration, :authorities, :private_key, :local_authority_name
+    attr_reader :configuration, :authorities, :private_key
 
     # Create a new Directory.
     #
@@ -52,15 +52,18 @@ module GlobalSession
         raise ConfigurationError, "Expected #{basename} to contain an RSA public key" unless @authorities[authority].public?
       end
 
-      if (authority_name = @configuration['authority'])
-        key_file = keys.detect { |kf| kf =~ /#{authority_name}.key$/ }
-        raise ConfigurationError, "Key file #{authority_name}.key not found" unless key_file        
+      if local_authority_name
+        key_file = keys.detect { |kf| kf =~ /#{local_authority_name}.key$/ }
+        raise ConfigurationError, "Key file #{local_authority_name}.key not found" unless key_file        
         @private_key  = OpenSSL::PKey::RSA.new(File.read(key_file))
         raise ConfigurationError, "Expected #{key_file} to contain an RSA private key" unless @private_key.private?
-        @local_authority_name = authority_name
       end
     end
 
+    def local_authority_name
+      @configuration['authority']
+    end
+    
     # Determine whether this system trusts a particular authority based on
     # the trust settings specified in Configuration.
     #
