@@ -26,6 +26,7 @@ common:
   timeout: 60
   cookie:
     name: global_session_cookie
+    domain: foobar.com
   trust: [authority1]
   authority: authority1
 EOS
@@ -72,7 +73,8 @@ describe GlobalSession::Rack::Middleware do
     @null_app = flexmock('Rack App')
     @null_app.should_receive(:call).once.by_default
     @app = GlobalSession::Rack::Middleware.new(@null_app, @config, @directory)
-    @env = {'rack.cookies' => {}}
+    @cookie_jar = {}
+    @env = {'rack.cookies' => @cookie_jar}
   end
 
   after(:each) do
@@ -86,7 +88,7 @@ describe GlobalSession::Rack::Middleware do
         mock_config('test/renew', '15')
         @original_session = GlobalSession::Session.new(@directory)
         @cookie = @original_session.to_s
-        @env['rack.cookies']['global_session_cookie'] = @cookie
+        @cookie_jar['global_session_cookie'] = @cookie
       end
 
       it 'should not renew the cookie' do
@@ -101,7 +103,7 @@ describe GlobalSession::Rack::Middleware do
         @original_session = GlobalSession::Session.new(@directory)
         @original_session.renew!(Time.at(Time.now.to_i + 15))
         @cookie = @original_session.to_s
-        @env['rack.cookies']['global_session_cookie'] = @cookie
+        @cookie_jar['global_session_cookie'] = @cookie
       end
 
       it 'should auto-renew the cookie if requested' do
@@ -117,9 +119,32 @@ describe GlobalSession::Rack::Middleware do
         end
 
         it 'should not update the cookie' do
-          flexmock(@env['rack_cookies']).should_receive(:[]=).never
+          flexmock(@cookie_jar).should_receive(:[]=).never
           @app.call(@env)
         end
+      end
+    end
+  end
+
+  context :wipe_cookie do
+    before(:each) do
+      flexmock(@app).should_receive(:read_cookie).once.and_raise(GlobalSession::ClientError)      
+    end
+
+    it 'should wipe the cookie' do
+      flexmock(@cookie_jar).should_receive(:[]=).with('global_session_cookie',
+                                                               {:value=>nil, :domain=>'example.com', :expires=>Time.at(0)})
+      @app.call(@env)
+    end
+    
+    context 'when the local system is not an authority' do
+      before(:each) do
+        mock_config('test/authority', nil)
+      end
+
+      it 'should not wipe the cookie' do
+        flexmock(@cookie_jar).should_receive(:[]=).never
+        @app.call(@env)
       end
     end
   end
@@ -130,17 +155,13 @@ describe GlobalSession::Rack::Middleware do
     end
 
     it 'should use the server name associated with the HTTP request' do
-      flexmock(@env['rack_cookies']).should_receive(:[]=).with('global_session_cookie', {:value=>String, :domain=>'baz.foobar.com', :expires=>Time})
+      flexmock(@cookie_jar).should_receive(:[]=).with('global_session_cookie', {:value=>String, :domain=>'baz.foobar.com', :expires=>Time})
       @app.call(@env)
     end
 
     context 'when the configuration specifies a cookie domain' do
-      before(:each) do
-        mock_config('test/cookie/domain', 'foobar.com')
-      end
-
       it 'should set cookies with the domain specified in the configuration' do
-        flexmock(@env['rack_cookies']).should_receive(:[]=).with('global_session_cookie', {:value=>String, :domain=>'foobar.com', :expires=>Time})
+        flexmock(@cookie_jar).should_receive(:[]=).with('global_session_cookie', {:value=>String, :domain=>'foobar.com', :expires=>Time})        
         @app.call(@env)
       end
     end
@@ -151,7 +172,18 @@ describe GlobalSession::Rack::Middleware do
       end
 
       it 'should not update the cookie' do
-        flexmock(@env['rack_cookies']).should_receive(:[]=).never
+        flexmock(@cookie_jar).should_receive(:[]=).never
+        @app.call(@env)
+      end
+    end
+
+    context 'when the local system is not an authority' do
+      before(:each) do
+        mock_config('test/authority', nil)        
+      end
+
+      it 'should not update the cookie' do
+        flexmock(@cookie_jar).should_receive(:[]=).never
         @app.call(@env)
       end
     end
@@ -169,7 +201,7 @@ describe GlobalSession::Rack::Middleware do
       before(:each) do
         @original_session = GlobalSession::Session.new(@directory)
         @cookie = @original_session.to_s
-        @env['rack.cookies']['global_session_cookie'] = @cookie
+        @cookie_jar['global_session_cookie'] = @cookie
       end
 
       it 'should populate env with a session object' do
@@ -182,7 +214,7 @@ describe GlobalSession::Rack::Middleware do
     context 'with errors' do
       before(:each) do
         @cookie_name = @config['cookie']['name']
-        @env['rack.cookies'][@cookie_name] = 'Not a real cookie. A mock protects me from being used.'
+        @cookie_jar[@cookie_name] = 'Not a real cookie. A mock protects me from being used.'
         @fresh_session = GlobalSession::Session.new(@directory)
       end
 

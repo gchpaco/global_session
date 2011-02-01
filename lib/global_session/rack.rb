@@ -110,6 +110,9 @@ module GlobalSession
       # === Parameters
       # env(Hash): Rack environment
       def wipe_cookie(env)
+        return unless env['global_session'].directory.local_authority_name
+        return if env['global_session.req.update'] == false
+
         domain = @configuration['cookie']['domain'] || env['SERVER_NAME']
         env['rack.cookies'][@cookie_name] = {:value => nil, :domain => domain, :expires => Time.at(0)}
       end
@@ -123,11 +126,12 @@ module GlobalSession
       # env(Hash): Rack environment
       # e(Exception): error that happened
       def handle_error(activity, env, e)
+        env['rack.logger'].error("#{e.class} while #{activity}: #{e} #{e.backtrace}") if env['rack.logger']
+
         if e.is_a?(ClientError) || e.is_a?(SecurityError)
           env['global_session.error'] = e
           wipe_cookie(env)
         elsif e.is_a? ConfigurationError
-          env['rack.logger'].error("#{e.class} while #{activity}: #{e} #{e.backtrace}") if env['rack.logger']
           env['global_session.error'] = e
         else
           raise e
