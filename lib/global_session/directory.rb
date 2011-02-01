@@ -1,3 +1,5 @@
+require 'set'
+
 module GlobalSession
   # The global session directory, which provides some lookup and decision services
   # to instances of Session.
@@ -58,6 +60,8 @@ module GlobalSession
         @private_key  = OpenSSL::PKey::RSA.new(File.read(key_file))
         raise ConfigurationError, "Expected #{key_file} to contain an RSA private key" unless @private_key.private?
       end
+
+      @invalid_sessions = Set.new
     end
 
     def local_authority_name
@@ -88,11 +92,13 @@ module GlobalSession
     # === Return
     # valid(true|false):: whether the specified session is valid
     def valid_session?(uuid, expired_at)
-      expired_at > Time.now
+      (expired_at > Time.now) && !@invalid_sessions.include?(uuid)
     end
 
     # Callback used by Session objects to report when the application code calls
-    # #invalidate! on them. The default implementation of this method does nothing.
+    # #invalidate! on them. The default implementation of this method records
+    # invalid session IDs using an in-memory data structure, which is not ideal
+    # for most implementations.
     #
     # uuid(String):: Global session UUID
     # expired_at(Time):: When the session expired
@@ -100,7 +106,7 @@ module GlobalSession
     # === Return
     # true:: Always returns true
     def report_invalid_session(uuid, expired_at)
-      true
+      @invalid_sessions << uuid
     end
   end  
 end

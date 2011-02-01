@@ -37,8 +37,20 @@ module GlobalSession
           @configuration = configuration
         end
 
+        begin
+          klass_name = @configuration['directory'] || 'GlobalSession::Directory'
+
+          #Constantize the type name that was given as a string
+          parts = klass_name.split('::')
+          namespace = Object
+          namespace = namespace.const_get(parts.shift.to_sym) until parts.empty?
+          directory_klass = namespace
+        rescue Exception => e
+          raise ConfigurationError, "Invalid/unknown directory class name #{@configuration['directory']}"
+        end
+
         if directory.instance_of?(String)
-          @directory = Directory.new(@configuration, directory)
+          @directory = directory_klass.new(@configuration, directory)
         else
           @directory = directory
         end
