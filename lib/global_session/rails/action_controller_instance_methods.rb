@@ -19,6 +19,9 @@ module GlobalSession
         unless base.instance_methods.include?("session_without_global_session")
           base.alias_method_chain :session, :global_session
         end
+        unless base.instance_methods.include?("log_processing_without_global_session")
+          base.alias_method_chain :log_processing, :global_session
+        end
       end
 
       # Shortcut accessor for global session configuration object.
@@ -115,16 +118,13 @@ module GlobalSession
       #
       # === Return
       # name(Type):: Description
-      def log_processing
-        if logger && logger.info?
-          log_processing_for_request_id
-          log_processing_for_parameters
-        end
-      end
+      def log_processing_with_global_session
+        return unless logger && logger.info?
 
-      def log_processing_for_request_id # :nodoc:
-        if global_session && global_session.id
-          session_id = global_session.id + " (#{session[:session_id]})"
+        gs = request.env['global_session']
+        
+        if gs && gs.id
+          session_id = gs.id + " (#{session[:session_id] || request.session_options[:id]})"
         elsif session[:session_id]
           session_id = session[:session_id]
         elsif request.session_options[:id]
@@ -137,9 +137,7 @@ module GlobalSession
         request_id << "\n  Session ID: #{session_id}" if session_id
 
         logger.info(request_id)
-      end
 
-      def log_processing_for_parameters # :nodoc:
         parameters = respond_to?(:filter_parameters) ? filter_parameters(params) : params.dup
         parameters = parameters.except!(:controller, :action, :format, :_method)
 
