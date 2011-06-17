@@ -44,7 +44,6 @@ module GlobalSession
       @configuration = configuration
       certs = Dir[File.join(keystore_directory, '*.pub')]
       keys  = Dir[File.join(keystore_directory, '*.key')]
-      raise ConfigurationError, "Excepted 0 or 1 key files, found #{keys.size}" unless [0, 1].include?(keys.size)
 
       @authorities = {}
       certs.each do |cert_file|

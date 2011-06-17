@@ -41,17 +41,6 @@ describe GlobalSession::Directory do
         end
       end
 
-      context 'and keystore contains two private keys' do
-        it 'should raise ConfigurationError' do
-          @keystore.create(@authority_name, true)
-          @keystore.create('wrong_name', true)
-
-          lambda {
-            GlobalSession::Directory.new(mock_config, @keystore.dir)
-          }.should raise_error(GlobalSession::ConfigurationError)
-        end
-      end
-
       context 'and keystore contains a correctly-named private key' do
         it 'should succeed' do
           @keystore.create(@authority_name, true)
