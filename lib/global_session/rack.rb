@@ -131,9 +131,9 @@ module GlobalSession
           if env['global_session'] && env['global_session'].valid?
             value = env['global_session'].to_s
             expires = @configuration['ephemeral'] ? nil : env['global_session'].expired_at
-            unless env['rack.cookies'].has_key?(@cookie_name) &&
-                env['rack.cookies'][@cookie_name] == value
-              env['rack.cookies'][@cookie_name] = {:value => value, :domain => domain, :expires => expires}
+            unless env['rack.cookies'].has_key?(@cookie_name) && env['rack.cookies'][@cookie_name] == value
+              env['rack.cookies'][@cookie_name] =
+                  {:value => value, :domain => domain, :expires => expires, :httponly=>true}
             end
           else
             # write an empty cookie
