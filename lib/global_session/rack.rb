@@ -166,7 +166,11 @@ module GlobalSession
       # env(Hash): Rack environment
       # e(Exception): error that happened
       def handle_error(activity, env, e)
-        env['rack.logger'].error("#{e.class} while #{activity}: #{e} #{e.backtrace}") if env['rack.logger']
+        if env['rack.logger']
+          msg = "#{e.class} while #{activity}: #{e}"
+          msg += " #{e.backtrace}" unless e.is_a?(ExpiredSession)
+          env['rack.logger'].error(msg)
+        end
 
         if e.is_a?(ClientError) || e.is_a?(SecurityError)
           env['global_session.error'] = e

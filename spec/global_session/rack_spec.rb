@@ -8,6 +8,11 @@ module Wacky
   class WildDirectory < GlobalSession::Directory; end
 end
 
+class FakeLogger
+  def error(msg)
+  end
+end
+
 describe GlobalSession::Rack::Middleware do
   include SpecHelper
 
@@ -289,6 +294,17 @@ describe GlobalSession::Rack::Middleware do
         flexmock(GlobalSession::Session).should_receive(:new).with(@directory).and_return(@fresh_session)
         @inner_app.should_receive(:call).never
         lambda { @app.call(@env) }.should raise_error(StandardError)
+      end
+      
+      it "should not include the backtrace for expired session exceptions" do
+        flexmock(GlobalSession::Session).should_receive(:new).once.and_raise(GlobalSession::ExpiredSession)
+        flexmock(GlobalSession::Session).should_receive(:new).with(@directory).and_return(@fresh_session)
+        @env["rack.logger"] = FakeLogger.new
+        flexmock(@env["rack.logger"]).should_receive(:error).with("GlobalSession::ExpiredSession while reading session cookie: GlobalSession::ExpiredSession")
+        @app.call(@env)
+        @env.should have_key('global_session')
+        @env.should have_key('global_session.error')
+        @env['global_session.error'].should be_a(GlobalSession::ExpiredSession)
       end
     end
   end
