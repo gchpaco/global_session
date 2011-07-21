@@ -52,21 +52,29 @@ module GlobalSession
   # you are integrating; see GlobalSession::Rails for more information.
   #
   class Configuration
-    # Create a new Configuration objectt
+    # Create a new Configuration object
     #
     # === Parameters
-    # config_File(String):: Absolute filesystem path to the configuration file
+    # config(String|Hash):: Absolute filesystem path to the configuration file, or Hash containing configuration
     # environment(String):: Config file section from which to read settings
     #
     # === Raise
     # MissingConfiguration:: if config file is missing or unreadable
     # TypeError:: if config file does not contain a YAML-serialized Hash
-    def initialize(config_file, environment)
-      @config_file = config_file
+    def initialize(config, environment)
+      if config.is_a?(Hash)
+        @config = config
+      elsif File.readable?(config)
+        data = YAML.load(File.read(config))
+        unless data.is_a?(Hash)
+          raise TypeError, "Configuration file #{File.basename(config)} must contain a hash as its top-level element"
+        end
+        @config = data
+      else
+        raise MissingConfiguration, "Missing or unreadable configuration file #{config}"
+      end
+
       @environment = environment
-      raise MissingConfiguration, "Missing or unreadable configuration file" unless File.readable?(@config_file)
-      @config      = YAML.load(File.read(@config_file))
-      raise TypeError, "#{config_file} must contain a Hash!" unless Hash === @config
       validate
     end
 
@@ -103,7 +111,7 @@ module GlobalSession
       elements.each do |element|
         object = object[element] if object
         if object.nil?
-          msg = "#{File.basename(@config_file)} does not specify required element #{elements.map { |x| "['#{x}']"}.join('')}"
+          msg = "Configuration does not specify required element #{elements.map { |x| "['#{x}']"}.join('')}"
           raise MissingConfiguration, msg
         end
       end
