@@ -16,6 +16,17 @@ module GlobalSession
   class Session
     attr_reader :id, :authority, :created_at, :expired_at, :directory
 
+    # Utility method to decode a cookie; good for console debugging. This performs no
+    # validation or security check of any sort.
+    #
+    # === Parameters
+    # cookie(String):: well-formed global session cookie
+    def self.decode_cookie(cookie)
+      zbin = Encoding::Base64Cookie.load(cookie)
+      json = Zlib::Inflate.inflate(zbin)
+      return Encoding::JSON.load(json)
+    end
+
     # Create a new global session object.
     #
     # === Parameters
@@ -82,7 +93,7 @@ module GlobalSession
       hash['dx'] = @insecure
       hash['s']  = @signature
       hash['a']  = authority
-      
+
       json = Encoding::JSON.dump(hash)
       zbin = Zlib::Deflate.deflate(json, Zlib::BEST_COMPRESSION)
       return Encoding::Base64Cookie.dump(zbin)

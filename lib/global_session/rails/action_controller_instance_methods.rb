@@ -124,6 +124,9 @@ module GlobalSession
         gs = request.env['global_session']
         
         if gs && gs.id
+          session_data = {}
+          gs.each_pair { |key, value| session_data[key] = value }
+
           session_id = gs.id + " (#{session[:session_id] || request.session_options[:id]})"
         elsif session[:session_id]
           session_id = session[:session_id]
@@ -135,6 +138,7 @@ module GlobalSession
         request_id << "to #{params[:format]} " if params[:format]
         request_id << "(for #{request_origin.split[0]}) [#{request.method.to_s.upcase}]"
         request_id << "\n  Session ID: #{session_id}" if session_id
+        request_id << "\n  Session Data: #{session_data.inspect}" if session_data
 
         logger.info(request_id)
 
