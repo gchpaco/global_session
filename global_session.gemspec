@@ -22,7 +22,7 @@ spec = Gem::Specification.new do |s|
   s.add_runtime_dependency('rack-contrib', ["~> 1.0"])
 
   basedir = File.dirname(__FILE__)
-  candidates = ['global_session.gemspec', 'init.rb', 'MIT-LICENSE', 'README.rdoc'] +
+  candidates = ['global_session.gemspec', 'init.rb', 'LICENSE', 'README.rdoc'] +
             Dir['lib/**/*'] +
             Dir['rails/**/*'] +
             Dir['rails/**/*'] +
