@@ -41,14 +41,14 @@ end
 
 module GlobalSession
   module Rails
-    def self.activate(config)
+    def self.activate(config, &block)
       authorities = File.join(::Rails.root, 'config', 'authorities')
       hgs_config  = ActionController::Base.global_session_config
       hgs_dir     = GlobalSession::Directory.new(hgs_config, authorities)
 
       # Add our middleware to the stack.
       config.middleware.use ::Rack::Cookies
-      config.middleware.use ::Rack::GlobalSession, hgs_config, hgs_dir
+      config.middleware.use ::Rack::GlobalSession, hgs_config, hgs_dir, &block
 
       return true
     end
