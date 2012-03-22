@@ -29,7 +29,7 @@ describe GlobalSession::Rails::ActionControllerInstanceMethods do
     @cookie           = @original_session.to_s
 
     @klass = Class.new(StubController) do
-      has_global_session :integrated=>true
+      has_global_session
     end
 
     @controller = @klass.new( {'global_session'=>@original_session}, 
@@ -65,52 +65,6 @@ describe GlobalSession::Rails::ActionControllerInstanceMethods do
 
     context 'with global_session_options[:renew] == false' do
       it 'should tell the middleware not to renew the cookie'
-    end
-  end
-
-  context :session_with_global_session do
-    context 'when no global session has been instantiated yet' do
-      before(:each) do
-        @controller.global_session.should be_nil
-      end
-
-      it 'should return the Rails session' do
-        flexmock(@controller).should_receive(:session_without_global_session).and_return('local session')
-        @controller.session.should == 'local session'
-      end
-    end
-    context 'when a global session has been instantiated' do
-      before(:each) do
-        @controller.global_session_initialize
-      end
-
-      it 'should return an integrated session' do
-        GlobalSession::IntegratedSession.should === @controller.session
-      end
-    end
-    context 'when the global session has been reset' do
-      before(:each) do
-        @controller.global_session_initialize
-        @old_integrated_session = @controller.session
-        GlobalSession::IntegratedSession.should === @old_integrated_session
-        @controller.instance_variable_set(:@global_session, 'new global session')
-      end
-
-      it 'should return a fresh integrated session' do
-        @controller.session.should_not == @old_integrated_session
-      end
-    end
-    context 'when the local session has been reset' do
-      before(:each) do
-        @controller.global_session_initialize
-        @old_integrated_session = @controller.session
-        GlobalSession::IntegratedSession.should === @old_integrated_session
-        @controller.request.session = 'new local session'
-      end
-
-      it 'should return a fresh integrated session' do
-        @controller.request.session.should_not == @old_integrated_session
-      end
     end
   end
 end

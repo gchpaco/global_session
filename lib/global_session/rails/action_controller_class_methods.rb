@@ -25,9 +25,8 @@ module GlobalSession
     # app-wide data such as the configuration object, and implements the DSL used to
     # configure controllers' use of the global session.
     module ActionControllerClassMethods
-      VALID_OPTIONS = [:integrated, :raise, :renew, :only, :except]
+      VALID_OPTIONS = [:raise, :renew, :only, :except]
       DEFAULT_OPTIONS = {
-        :integrated=>false,
         :raise=>true,
         :renew=>true
       }

@@ -43,7 +43,6 @@ describe GlobalSession::Rails::ActionControllerClassMethods do
     end
 
     it 'should use sensible defaults' do
-      @klass.global_session_options[:integrated].should be_false
       @klass.global_session_options[:raise].should be_true
     end
 
