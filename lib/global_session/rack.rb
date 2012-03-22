@@ -88,7 +88,7 @@ module GlobalSession
         begin
           read_cookie(env)
         rescue Exception => e
-          env['global_session'] = Session.new(@directory)
+          env['global_session'] = @directory.create_session
           handle_error('reading session cookie', env, e)
         end
 
@@ -114,12 +114,11 @@ module GlobalSession
       # env(Hash): Rack environment.
       def read_cookie(env)
         if env['rack.cookies'].has_key?(@cookie_name)
-          env['global_session'] = Session.new(@directory,
-                                              env['rack.cookies'][@cookie_name])
+          env['global_session'] = @directory.create_session(env['rack.cookies'][@cookie_name])
         elsif @cookie_retrieval && cookie = @cookie_retrieval.call(env)
-          env['global_session'] = Session.new(@directory, cookie)
+          env['global_session'] = @directory.create_session(cookie)
         else
-          env['global_session'] = Session.new(@directory)
+          env['global_session'] = @directory.create_session
         end
 
         true

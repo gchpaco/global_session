@@ -59,7 +59,7 @@ module GlobalSession
     # === Parameters
     # keystore_directory(String):: Absolute path to authority keystore
     #
-    # ===Raise
+    # === Raise
     # ConfigurationError:: if too many or too few keys are found, or if *.key/*.pub files are malformatted
     def initialize(configuration, keystore_directory)
       @configuration = configuration
@@ -82,6 +82,26 @@ module GlobalSession
       end
 
       @invalid_sessions = Set.new
+    end
+
+    # Create a new Session, initialized against this directory and ready to
+    # be used by the app.
+    #
+    # === Parameters
+    # directory(Directory):: directory implementation that the session should use for various operations
+    # cookie(String):: Optional, serialized global session cookie. If none is supplied, a new session is created.
+    # valid_signature_digest(String):: Optional, already-trusted signature. If supplied, the expensive RSA-verify operation will be skipped if the cookie's signature matches the value supplied.
+    #
+    # === Return
+    # session(Session):: the newly-initialized session
+    #
+    # ===Raise
+    # InvalidSession:: if the session contained in the cookie has been invalidated
+    # ExpiredSession:: if the session contained in the cookie has expired
+    # MalformedCookie:: if the cookie was corrupt or malformed
+    # SecurityError:: if signature is invalid or cookie is not signed by a trusted authority
+    def create_session(*params)
+      Session.new(self, *params)
     end
 
     def local_authority_name
