@@ -25,24 +25,24 @@ module GlobalSession
     # app-wide data such as the configuration object, and implements the DSL used to
     # configure controllers' use of the global session.
     module ActionControllerClassMethods
-      def global_session_config
-        unless @global_session_config
-          config_file = File.join(::Rails.root, 'config', 'global_session.yml')
-          @global_session_config = GlobalSession::Configuration.new(config_file, RAILS_ENV)
-        end
-
-        return @global_session_config
-      end
-
-      def global_session_config=(config)
-        @global_session_config = config
-      end
+      VALID_OPTIONS = [:integrated, :raise, :renew, :only, :except]
+      DEFAULT_OPTIONS = {
+        :integrated=>false,
+        :raise=>true,
+        :renew=>true
+      }
 
       def has_global_session(options={})
-        odefault = {:integrated=>false, :raise=>true}
-        obase = self.superclass.global_session_options if self.superclass.respond_to?(:global_session_options)
-        obase ||= {}
-        options = odefault.merge(obase).merge(options)
+        #validate our options
+        options.assert_valid_keys(VALID_OPTIONS)
+        if options.key?(:only) && options.key?(:except)
+          raise ArgumentError, "Must specify :only OR :except, you specified both"
+        end
+
+        #start with default options; merge any options inherited from our base class;
+        #merge any options provided by the caller.
+        obase   = self.superclass.global_session_options
+        options = DEFAULT_OPTIONS.merge(obase).merge(options)
 
         #ensure derived-class options don't conflict with mutually exclusive base-class options
         options.delete(:only) if obase.has_key?(:only) && options.has_key?(:except)
@@ -51,20 +51,23 @@ module GlobalSession
         #mark the global session as enabled (a hidden option) and store our
         #calculated, merged options
         options[:enabled] = true
-        self.global_session_options = options
 
-        before_filter :global_session_initialize
+        self.global_session_options = options
       end
 
       def no_global_session
-        @global_session_options[:enabled] = false if @global_session_options
-        skip_before_filter :global_session_initialize
+        #mark the global session as not-enabled (a hidden option)
+        self.global_session_options={:enabled=>false}
       end
 
       def global_session_options
-        obase = self.superclass.global_session_options if self.superclass.respond_to?(:global_session_options) 
-        obase ||= {}
-        @global_session_options || obase
+        if @global_session_options
+          @global_session_options
+        elsif self.superclass.respond_to?(:global_session_options)
+          self.superclass.global_session_options
+        else
+          {}
+        end
       end
 
       def global_session_options=(options)

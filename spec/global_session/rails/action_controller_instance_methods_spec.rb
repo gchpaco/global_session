@@ -22,9 +22,9 @@ describe GlobalSession::Rails::ActionControllerInstanceMethods do
     mock_config('test/trust', ['authority1'])
     mock_config('test/authority', 'authority1')
 
-    ActionController::Base.global_session_config = mock_config
-
-    @directory        = GlobalSession::Directory.new(mock_config, @keystore.dir)
+    GlobalSession::Rails.configuration = mock_config
+    GlobalSession::Rails.directory = GlobalSession::Directory.new(mock_config, @keystore.dir)
+    @directory        = GlobalSession::Rails.directory
     @original_session = GlobalSession::Session.new(@directory)
     @cookie           = @original_session.to_s
 
@@ -54,19 +54,17 @@ describe GlobalSession::Rails::ActionControllerInstanceMethods do
         }.should raise_error(GlobalSession::ExpiredSession)
       end
     end
-  end
 
-  context :global_session_skip_update do
-    it 'should set the appropriate Rack env' do
-      @controller.global_session_skip_update
-      @controller.request.env['global_session.req.update'].should be_false
+    context 'with global_session_options[:enabled] == false' do
+      it 'should skip initialization and tell the middleware not to do anything'
     end
-  end
 
-  context :global_session_skip_renew do
-    it 'should set the appropriate Rack env' do
-      @controller.global_session_skip_renew
-      @controller.request.env['global_session.req.renew'].should be_false
+    context 'with global_session_options[:renew] == false' do
+      it 'should tell the middleware not to renew the cookie'
+    end
+
+    context 'with global_session_options[:renew] == false' do
+      it 'should tell the middleware not to renew the cookie'
     end
   end
 

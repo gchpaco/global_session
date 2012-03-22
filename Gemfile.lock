@@ -13,7 +13,7 @@ PATH
     global_session (1.0.9)
       json (~> 1.4)
       rack-contrib (~> 1.0)
-      uuidtools (~> 2.1)
+      uuidtools (>= 1.0)
 
 GEM
   remote: http://rubygems.org/
