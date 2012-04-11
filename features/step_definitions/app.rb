@@ -80,5 +80,5 @@ TEXT
 end
 
 Given /^I have my application running$/ do
-  pending
+  run_app
 end

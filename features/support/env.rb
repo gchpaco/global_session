@@ -196,6 +196,16 @@ class RightRailsTestWorld
     existing_versions = Dir[File.join(migrations_dir, '*.rb')].map { |p| Integer(File.basename(p).split('_', 2).first) }
     (existing_versions.max || 0) + 1
   end
+
+  def run_app
+    @app_thread = Thread.new do
+      app_shell('./script/server -p 11415')
+    end
+  end
+
+  def stop_app
+    @app_thread.kill
+  end
 end
 
 World do
@@ -203,5 +213,6 @@ World do
 end
 
 After do
+  stop_app
   app_shell('rake db:drop', :ignore_errors=>true)
 end
