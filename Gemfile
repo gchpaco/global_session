@@ -1,4 +1,5 @@
 source "http://rubygems.org"
+gemspec
 
 group :development do
   gem 'rake',              '~> 0.8'
@@ -6,9 +7,15 @@ group :development do
   gem 'rspec',             '~> 1.3'
   gem 'flexmock',          '~> 0.8'
 
-  #Use a fork of ActionPack 2.3.5 in order to prevent idiotic Rack bug
-  gem 'actionpack',        '2.3.5', :git=>'git://github.com/xeger/actionpack.git',
-                                    :branch=>'master'
+  # Use a fork of ActionPack 2.3.5 in order to prevent idiotic Rack bug
+  # gem 'actionpack', '2.3.5', :git=> 'git://github.com/xeger/actionpack.git'
+  gem 'rails',      '2.3.14'
 end
 
-gemspec
+group :cucumber do
+  gem 'cucumber', "~> 0.8"
+  gem 'mysql'
+  gem 'sqlite3'
+  gem 'sequel', '3.0.0'
+end
+
