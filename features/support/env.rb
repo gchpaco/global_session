@@ -198,6 +198,15 @@ class RightRailsTestWorld
     (existing_versions.max || 0) + 1
   end
 
+  def apply_template
+    FileUtils.cp_r(File.join($basedir, 'fixtures', 'rails_2.3.14', '.'), app_root)
+  end
+
+  def apply_global_session_config
+    FileUtils.cp(File.join(app_root, 'config', 'environment_with_global_session_config.rb'),
+                 File.join(app_root, 'config', 'environment.rb'))
+  end
+
   def run_app
     @app_thread = Thread.new do
       app_shell('./script/server -p 11415')
