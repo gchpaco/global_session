@@ -237,7 +237,7 @@ module GlobalSession
     # true:: Always returns true
     def renew!(expired_at=nil)
       authority_check
-      minutes = @configuration['timeout'].to_i
+      minutes = Integer(@configuration['timeout'])
       expired_at ||= Time.at(Time.now.utc + 60 * minutes)
       @expired_at = expired_at
       @dirty_secure = true
