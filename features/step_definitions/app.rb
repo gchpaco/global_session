@@ -82,3 +82,33 @@ end
 Given /^I have my application running$/ do
   run_app
 end
+
+When /^I send ([^"]*) request "([^"]*)"$/ do |method, command|
+  @response = make_request(method.downcase.to_sym, command)
+end
+
+Then /^I should receive message (?:"([^"]*)")?$/ do |message|
+  @response.body.should_not be_nil
+end
+
+def make_request(method, command, parameters = nil)
+  http = Net::HTTP.new("localhost", 11415)
+
+  #command = "/#{command}"
+
+  request = case method
+            when :get
+              Net::HTTP::Get.new(command)
+            when :post
+              Net::HTTP::Post.new(command)
+            when :delete
+              Net::HTTP::Delete.new(command)
+            end
+
+  response = http.start do |http|
+    http.request(request)
+  end
+
+  response
+end
+

@@ -27,6 +27,7 @@ require 'bundler/setup'
 require 'tempfile'
 require 'shellwords'
 require 'thread'
+require 'net/http'
 
 #for String#to_const and other utility stuff
 # require 'right_support'
@@ -201,6 +202,7 @@ class RightRailsTestWorld
     @app_thread = Thread.new do
       app_shell('./script/server -p 11415')
     end
+    sleep(5)
   end
 
   def stop_app
