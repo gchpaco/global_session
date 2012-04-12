@@ -33,10 +33,33 @@ Feature: Rails 2.3.14
     Then I should receive something interesting from application
     And I have only 1 cookie variable called 'global_session'
 
-  Scenario: save data to the local session variable
+  Scenario: save data to the local session
     When I send POST request 'happy/update' with the following:
       | key   | my_data       |
       | value | hello cookies |
     Then I should be redirected to 'happy/index'
     And I should receive the following:
       | my_data | hello cookies |
+
+  Scenario: retrieve data from the local session
+    Given I have data stored in local session:
+      | woohoo | yabadabadoo |
+    When I send GET request 'happy/index'
+    And I should receive the following:
+      | my_data | hello cookies |
+
+  Scenario: delete data from the local sessoin
+    Given I have data stored in local session:
+      | woohoo | yabadabadoo |
+    When I send DELETE request 'happy/destroy'
+    Then I should be redirected to 'happy/index'
+    And I should receive something interesting from application
+
+  Scenario: expired global_session
+    Given I have data stored in local session:
+      | woohoo | yabadabadoo |
+    And I have global_session expired
+    When I send GET request 'happy/index'
+    Then I should receive something interesting from application
+    And I should have new global_session generated
+

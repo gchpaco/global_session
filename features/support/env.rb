@@ -228,6 +228,10 @@ World do
   RightRailsTestWorld.new
 end
 
+Before('@load_from_cookie') do
+  #mocks from spec go here
+end
+
 After do
   app_shell('rake db:drop', :ignore_errors=>true)
 end
