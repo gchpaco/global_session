@@ -224,6 +224,5 @@ World do
 end
 
 After do
-  stop_app
   app_shell('rake db:drop', :ignore_errors=>true)
 end
