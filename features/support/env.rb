@@ -208,14 +208,19 @@ class RightRailsTestWorld
   end
 
   def run_app
-    @app_thread = Thread.new do
-      app_shell('./script/server -p 11415')
+    app_shell('./script/server -p 11415 -d')
+    loop do
+      begin
+        TCPSocket.new('localhost', '11415').close
+        break
+      rescue Errno::ECONNREFUSED
+      end
     end
-    sleep(5)
+    @server_pid = File.read(File.join(app_root, 'tmp', 'pids', 'server.pid')).to_i
   end
 
   def stop_app
-    @app_thread.kill
+    Process.kill("KILL", @server_pid)
   end
 end
 
