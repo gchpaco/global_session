@@ -29,7 +29,14 @@ Feature: Rails 2.3.14
     Then I should have my application up and running
 
   Scenario: initializing global_session cookies
-    When I send GET request with the following:
-      | happy | index |
-    Then I should recieve something interesting from application
+    When I send GET request 'happy/index'
+    Then I should receive something interesting from application
     And I have only 1 cookie variable called 'global_session'
+
+  Scenario: save data to the local session variable
+    When I send POST request 'happy/update' with the following:
+      | key   | my_data       |
+      | value | hello cookies |
+    Then I should be redirected to 'happy/index'
+    And I should receive the following:
+      | my_data | hello cookies |
