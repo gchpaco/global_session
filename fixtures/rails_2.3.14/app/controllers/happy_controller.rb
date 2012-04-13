@@ -1,12 +1,12 @@
 class HappyController < ApplicationController
 
   def index
-    render :text => session.to_json
+    render :text => { :message => 'Be Happy!!!', :session => session }.to_json
   end
 
   def update
-    key = params[:session][:key].to_sym
-    val = params[:session][:value]
+    key = params[:key].to_sym
+    val = params[:value]
     session[key] = val
     redirect_to :action => :index
   end

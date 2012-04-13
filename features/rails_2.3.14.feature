@@ -2,9 +2,10 @@ Feature: Rails 2.3.14
   In order to ensure full compatibility with different Rails versions
   Developers should be able to use global_session for Rails 2.3.14
 
-  Background:
+  Scenario:
     Given a Rails 2.3.14 application
     And configuration fixtures are loaded
+    And database created
     And global_session added as a gem
 
   Scenario: configuring global_session authority
@@ -12,25 +13,24 @@ Feature: Rails 2.3.14
     When I run './script/generate' with 'global_session_authority'
     Then I should receive message about about successful result
     And I should have the following files generated:
-      | config/authorities | development.key |
-      | config/authorities | development.pub |
+      | config | authorities | development.key |
+      | config | authorities | development.pub |
 
   Scenario: configuring global_session config
     Given I use localhost as a domain
     When I run './script/generate' with 'global_session'
     Then I should receive message about successful result
-    And I should have the following file generated:
+    And I should have the following files generated:
       | config | global_session.yml |
 
   Scenario: configuring global_session middleware
     Given global_session added as a middleware
-    When I lunch my application at:
-      | localhost | 11415 |
+    When I lunch my application on 11415 port
     Then I should have my application up and running
 
   Scenario: initializing global_session cookies
     When I send GET request 'happy/index'
-    Then I should receive something interesting from application
+    Then I should receive message "Be Happy!!!"
     And I have only 1 cookie variable called 'global_session'
 
   Scenario: save data to the local session
@@ -38,14 +38,14 @@ Feature: Rails 2.3.14
       | key   | my_data       |
       | value | hello cookies |
     Then I should be redirected to 'happy/index'
-    And I should receive the following:
+    And I should receive in session the following variables:
       | my_data | hello cookies |
 
   Scenario: retrieve data from the local session
     Given I have data stored in local session:
       | woohoo | yabadabadoo |
     When I send GET request 'happy/index'
-    And I should receive the following:
+    And I should receive in session the following variables:
       | my_data | hello cookies |
 
   Scenario: delete data from the local sessoin

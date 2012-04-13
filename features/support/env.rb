@@ -27,7 +27,7 @@ require 'bundler/setup'
 require 'tempfile'
 require 'shellwords'
 require 'thread'
-require 'net/http'
+require 'httpclient'
 
 #for String#to_const and other utility stuff
 # require 'right_support'
@@ -94,6 +94,19 @@ class RightRailsTestWorld
     end
 
     $?.success?.should(be_true) unless ignore_errors
+  end
+
+  def app_shell_with_log(cmd, options={})
+    delete_log
+    app_shell("#{cmd} > #{log_file}", options)
+  end
+
+  def log_file
+    app_path('log', 'shell.log')
+  end
+
+  def delete_log
+    FileUtils.rm(log_file) if File.exist?(log_file)
   end
 
   MAX_CONSOLE_TIME = 60.0
@@ -198,30 +211,57 @@ class RightRailsTestWorld
     (existing_versions.max || 0) + 1
   end
 
-  def apply_template
-    FileUtils.cp_r(File.join($basedir, 'fixtures', 'rails_2.3.14', '.'), app_root)
+  def app_rails_version
+    File.read(app_path('config', 'environment.rb')).match(/RAILS_GEM_VERSION = '(.*)'/)[1]
   end
 
-  def apply_global_session_config
-    FileUtils.cp(File.join(app_root, 'config', 'environment_with_global_session_config.rb'),
+  # Set of methods to work with fixtures
+  def load_fixtures(rails_version)
+    rails_fixtures_path = File.join($basedir, 'fixtures', "rails_#{rails_version}", '.')
+    raise ArgumentError, "Fixtures for rails #{rails_version} does not exist." unless File.exist?(rails_fixtures_path)
+    FileUtils.cp_r(rails_fixtures_path, app_root)
+  end
+
+  def add_global_session_gem
+    FileUtils.cp(File.join(app_root, 'config', 'environment_with_global_session_gem.rb'),
                  File.join(app_root, 'config', 'environment.rb'))
   end
 
-  def run_app
-    app_shell('./script/server -p 11415 -d')
+  def add_global_session_middleware
+    FileUtils.cp(File.join(app_root, 'config', 'environment_with_global_session_as_middleware.rb'),
+                 File.join(app_root, 'config', 'environment.rb'))
+  end
+
+  # Run rails application
+  def run_application_at(port)
+    @@port = port
+    app_shell("./script/server -p #{port} -d")
     loop do
       begin
-        TCPSocket.new('localhost', '11415').close
+        TCPSocket.new('localhost', port).close
         break
       rescue Errno::ECONNREFUSED
       end
     end
-    @server_pid = File.read(File.join(app_root, 'tmp', 'pids', 'server.pid')).to_i
+    @@server_pid = File.read(app_path('tmp', 'pids', 'server.pid')).to_i
   end
 
-  def stop_app
-    Process.kill("KILL", @server_pid)
+  # Make request to our application
+  def make_request(method, path, params = nil)
+    @@client ||= HTTPClient.new
+    @@client.request(method, "http://localhost:#{@@port}/#{path}", params)
   end
+
+  # Kill application server
+  def stop_application
+    Process.kill("KILL", @@server_pid)
+  end
+
+  at_exit do
+    Process.kill("KILL", @@server_pid)
+    FileUtils.rm_rf(@@app_root)
+  end
+
 end
 
 World do
@@ -230,8 +270,4 @@ end
 
 Before('@load_from_cookie') do
   #mocks from spec go here
-end
-
-After do
-  app_shell('rake db:drop', :ignore_errors=>true)
 end
