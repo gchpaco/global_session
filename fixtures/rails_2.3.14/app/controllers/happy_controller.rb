@@ -5,14 +5,14 @@ class HappyController < ApplicationController
   end
 
   def update
-    key = params[:key].to_sym
+    key = params[:key]
     val = params[:value]
     session[key] = val
     redirect_to :action => :index
   end
 
   def destroy
-    key = params[:key].to_sym
+    key = params[:key]
     session.delete(key)
     redirect_to :action => :index
   end

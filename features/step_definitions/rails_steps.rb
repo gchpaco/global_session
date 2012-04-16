@@ -64,6 +64,11 @@ Then /^I should have my application up and running$/ do
   }.should_not raise_error(Errno::ECONNREFUSED)
 end
 
+Given /^global_session configured with local session integration$/ do
+  add_local_session_integration
+  restart_application
+end
+
 When /^I send (.+) request '(.+)'$/ do |method, path|
   @response = make_request(method.downcase.to_sym, path)
 end
@@ -72,9 +77,9 @@ Then /^I should receive message "(.+)"$/ do |message|
   JSON::parse(@response.body)["message"].should match(message)
 end
 
-Then /^I have only (\d+) cookie variable called '(.+)'$/ do |cookie_num, cookie_name|
-  @response.cookies.size.should be_equal(1)
-  @response.cookies.map(&:name).include?(cookie_name).should be_true
+Then /^I have (\d+) cookie variable called:$/ do |cookie_num, cookie_names|
+  http_client.cookies.size.should be_equal(cookie_num.to_i)
+  http_client.cookies.map(&:name).sort.should == cookie_names.raw.flatten.sort
 end
 
 When /^I send (.+) request '(.+)' with the following:$/ do |method, path, data|
@@ -89,4 +94,14 @@ end
 
 Then /^I should receive in session the following variables:$/ do |data|
   JSON::parse(@response.body)["session"].should == data.rows_hash
+end
+
+Given /^I have data stored in local session:$/ do |data|
+  session = '{ ' + data.raw.map do |pair|
+    "'#{pair.first}' => '#{pair.last}'"
+  end.join(',') + ' }'
+
+  app_console("@session = ActiveRecord::SessionStore::Session.last")
+  app_console("@session.data = #{session}")
+  app_console("@session.save")
 end

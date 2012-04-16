@@ -31,7 +31,8 @@ Feature: Rails 2.3.14
   Scenario: initializing global_session cookies
     When I send GET request 'happy/index'
     Then I should receive message "Be Happy!!!"
-    And I have only 1 cookie variable called 'global_session'
+    And I have 1 cookie variable called:
+      | global_session |
 
   Scenario: save data to the local session
     When I send POST request 'happy/update' with the following:
@@ -40,20 +41,26 @@ Feature: Rails 2.3.14
     Then I should be redirected to 'happy/index'
     And I should receive in session the following variables:
       | my_data | hello cookies |
+    And I have 2 cookie variable called:
+      | global_session |
+      | _local_session |
 
   Scenario: retrieve data from the local session
     Given I have data stored in local session:
       | woohoo | yabadabadoo |
     When I send GET request 'happy/index'
     And I should receive in session the following variables:
-      | my_data | hello cookies |
+      | woohoo | yabadabadoo |
 
   Scenario: delete data from the local sessoin
     Given I have data stored in local session:
-      | woohoo | yabadabadoo |
-    When I send DELETE request 'happy/destroy'
+      | woohoo  | yabadabadoo   |
+      | my_data | hello cookies |
+    When I send DELETE request 'happy/destroy' with the following:
+      | key | woohoo |
     Then I should be redirected to 'happy/index'
-    And I should receive something interesting from application
+    And I should receive in session the following variables:
+      | my_data | hello cookies |
 
   Scenario: expired global_session
     Given I have data stored in local session:

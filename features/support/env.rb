@@ -12,7 +12,7 @@
 # The above copyright notice and this permission notice shall be
 # included in all copies or substantial portions of the Software.
 #
-# THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
+# THE SOFTWAsRE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 # IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
@@ -53,9 +53,6 @@ class RightRailsTestWorld
 
     unless File.directory?(@@app_root)
       FileUtils.mkdir_p(@@app_root)
-      at_exit do
-        FileUtils.rm_rf(@@app_root)
-      end
     end
 
     @@app_root
@@ -223,13 +220,24 @@ class RightRailsTestWorld
   end
 
   def add_global_session_gem
-    FileUtils.cp(File.join(app_root, 'config', 'environment_with_global_session_gem.rb'),
-                 File.join(app_root, 'config', 'environment.rb'))
+    FileUtils.cp(app_path('config', 'environment_with_global_session_gem.rb'),
+                 app_path('config', 'environment.rb'))
   end
 
   def add_global_session_middleware
-    FileUtils.cp(File.join(app_root, 'config', 'environment_with_global_session_as_middleware.rb'),
-                 File.join(app_root, 'config', 'environment.rb'))
+    FileUtils.cp(app_path('config', 'environment_with_global_session_as_middleware.rb'),
+                 app_path('config', 'environment.rb'))
+  end
+
+  def add_local_session_integration
+    gbl_config_file = app_path('config', 'global_session.yml')
+
+    config = YAML.load_file(gbl_config_file)
+    config["common"]["local_session_integration"] = true
+
+    File.open(gbl_config_file, 'w') do |f|
+      YAML.dump(config, f)
+    end
   end
 
   # Run rails application
@@ -246,15 +254,20 @@ class RightRailsTestWorld
     @@server_pid = File.read(app_path('tmp', 'pids', 'server.pid')).to_i
   end
 
-  # Make request to our application
-  def make_request(method, path, params = nil)
-    @@client ||= HTTPClient.new
-    @@client.request(method, "http://localhost:#{@@port}/#{path}", params)
+  def restart_application
+    Process.kill("KILL", @@server_pid)
+    http_client.cookies.clear
+    run_application_at(@@port)
   end
 
-  # Kill application server
-  def stop_application
-    Process.kill("KILL", @@server_pid)
+  # http client
+  def http_client
+    @@client ||= HTTPClient.new
+  end
+
+  # Make request to our application
+  def make_request(method, path, params = nil)
+    http_client.request(method, "http://localhost:#{@@port}/#{path}", params)
   end
 
   at_exit do
