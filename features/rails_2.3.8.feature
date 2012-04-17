@@ -1,9 +1,9 @@
-Feature: Rails 2.3.14
+Feature: Rails 2.3.8
   In order to ensure full compatibility with different Rails versions
-  Developers should be able to use global_session for Rails 2.3.14
+  Developers should be able to use global_session for Rails 2.3.8
 
   Scenario:
-    Given a Rails 2.3.14 application
+    Given a Rails 2.3.8 application
     And configuration fixtures are loaded
     And database created
     And global_session added as a gem
@@ -31,8 +31,9 @@ Feature: Rails 2.3.14
   Scenario: initializing global_session cookies
     When I send GET request 'happy/index'
     Then I should receive message "Be Happy!!!"
-    And I have 1 cookie variable called:
+    And I have 2 cookie variable called:
       | global_session |
+      | _local_session |
 
   Scenario: save data to the local session
     When I send POST request 'happy/update' with the following:
@@ -44,6 +45,23 @@ Feature: Rails 2.3.14
     And I have 2 cookie variable called:
       | global_session |
       | _local_session |
+
+  Scenario: local session integration
+    Given global_session configured with local session integration
+    When I send GET request 'happy/index'
+    Then I should receive message "Be Happy!!!"
+    And I have 1 cookie variable called:
+      | global_session |
+
+  Scenario: save data to the local session
+    When I send POST request 'happy/update' with the following:
+      | key   | my_data       |
+      | value | hello cookies |
+    Then I should be redirected to 'happy/index'
+    And I should receive in session the following variables:
+      | my_data | hello cookies |
+    And I have 1 cookie variable called:
+      | global_session |
 
   Scenario: retrieve data from the local session
     Given I have data stored in local session:
@@ -67,6 +85,6 @@ Feature: Rails 2.3.14
       | woohoo | yabadabadoo |
     And I have global_session expired
     When I send GET request 'happy/index'
-    Then I should receive something interesting from application
+    Then I should receive empty session
     And I should have new global_session generated
 

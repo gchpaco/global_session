@@ -10,7 +10,7 @@ group :development do
 
   # Use a fork of ActionPack 2.3.5 in order to prevent idiotic Rack bug
   # gem 'actionpack', '2.3.5', :git=> 'git://github.com/xeger/actionpack.git'
-  gem 'rails',      '2.3.14'
+  gem 'rails',      '2.3.8'
 end
 
 group :cucumber do

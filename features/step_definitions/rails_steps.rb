@@ -105,3 +105,16 @@ Given /^I have data stored in local session:$/ do |data|
   app_console("@session.data = #{session}")
   app_console("@session.save")
 end
+
+Given /^I have global_session expired$/ do
+  @global_session_origin = http_client.cookies.first.value
+  http_client.cookies.clear
+end
+
+Then /^I should receive empty session$/ do
+  JSON::parse(@response.body)["session"].should == {}
+end
+
+Then /^I should have new global_session generated$/ do
+  http_client.cookies.first.value.should_not == @global_session_origin
+end
