@@ -16,6 +16,7 @@ end
 
 Given /^global_session added as a gem$/ do
   add_global_session_gem
+  install_global_session_gem
 end
 
 Given /^I use (.+) environment$/ do |env|

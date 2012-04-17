@@ -219,6 +219,10 @@ class RightRailsTestWorld
     FileUtils.cp_r(rails_fixtures_path, app_root)
   end
 
+  def install_global_session_gem
+    FileUtils.cp_r($basedir, app_path('vendor', 'plugins', 'global_session'))
+  end
+
   def add_global_session_gem
     FileUtils.cp(app_path('config', 'environment_with_global_session_gem.rb'),
                  app_path('config', 'environment.rb'))
