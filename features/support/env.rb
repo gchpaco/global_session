@@ -28,6 +28,8 @@ require 'tempfile'
 require 'shellwords'
 require 'thread'
 require 'httpclient'
+require 'spec/stubs/cucumber'
+require 'spec/spec_helper'
 
 #for String#to_const and other utility stuff
 # require 'right_support'
@@ -38,6 +40,7 @@ require File.join($libdir, 'global_session')
 
 class RightRailsTestWorld
   class ShellCommandFailed < Exception; end
+  include SpecHelper
 
   def initialize
     @app_console_mutex = Mutex.new
@@ -275,7 +278,7 @@ class RightRailsTestWorld
   end
 
   at_exit do
-    Process.kill("KILL", @@server_pid)
+    Process.kill("KILL", @@server_pid) if @@server_pid
     FileUtils.rm_rf(@@app_root)
   end
 
@@ -285,6 +288,6 @@ World do
   RightRailsTestWorld.new
 end
 
-Before('@load_from_cookie') do
-  #mocks from spec go here
+After do
+  @keystore.destroy if @keystore
 end

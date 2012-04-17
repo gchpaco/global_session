@@ -11,20 +11,20 @@ Feature: GlobalSession
       | common/attributes/signed    | ['user']            |
       | common/attributes/insecure  | ['favorite_color']  |
       | test/timeout                | '60'                |
+      | test/trust                  | ['authority1']      |
+      | test/authority              | 'authority1'        |
 
-      # @load_from_cookie
   Scenario: everything is copascetic
     When I load it from cookie successful
     Then everything is ok
 
-  #@load_from_cookie
   Scenario: a trusted signature
-    When a trusted signature is passed in
+    When I load it from cookie successful
+    And a trusted signature is passed in
     And I have a valid digest
     Then I should not recompute the signature
 
-  #@load_from_cookie
   Scenario: an insecure attribute
-    Given an insecure attribute has changed
-    When I load it from cookie
+    When I load it from cookie successful
+    And an insecure attribute has changed
     Then everything is ok
