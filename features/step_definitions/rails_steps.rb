@@ -1,5 +1,5 @@
 Given /^a Rails ([\d\.]+) application$/ do |rails_version|
-  STDOUT.puts "====> Create rails #{rails_version} application in  #{app_path('')}"
+  ENV['RAILS_VERSION'] = rails_version
   app_shell("rails _#{rails_version}_ . -q")
 end
 
