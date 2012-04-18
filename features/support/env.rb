@@ -211,10 +211,6 @@ class RightRailsTestWorld
     (existing_versions.max || 0) + 1
   end
 
-  def app_rails_version
-    File.read(app_path('config', 'environment.rb')).match(/RAILS_GEM_VERSION = '(.*)'/)[1]
-  end
-
   # Set of methods to work with fixtures
   def load_fixtures(rails_version)
     rails_fixtures_path = File.join($basedir, 'fixtures', "rails_#{rails_version}", '.')
@@ -247,6 +243,12 @@ class RightRailsTestWorld
     end
   end
 
+  def prepare_to_create
+    stop_application
+    clean_cookies
+    FileUtils.rm_rf(@@app_root) if defined? @@app_root
+  end
+
   # Run rails application
   def run_application_at(port)
     @@port = port
@@ -261,9 +263,13 @@ class RightRailsTestWorld
     @@server_pid = File.read(app_path('tmp', 'pids', 'server.pid')).to_i
   end
 
+  def stop_application
+    Process.kill("KILL", @@server_pid) if defined? @@server_pid
+  end
+
   def restart_application
-    Process.kill("KILL", @@server_pid)
-    http_client.cookies.clear
+    stop_application
+    clean_cookies
     run_application_at(@@port)
   end
 
@@ -277,9 +283,13 @@ class RightRailsTestWorld
     http_client.request(method, "http://localhost:#{@@port}/#{path}", params)
   end
 
+  def clean_cookies
+    http_client.cookies.clear
+  end
+
   at_exit do
-    Process.kill("KILL", @@server_pid) if @@server_pid
-    FileUtils.rm_rf(@@app_root)
+    Process.kill("KILL", @@server_pid) if defined? @@server_pid
+    FileUtils.rm_rf(@@app_root) if defined? @@app_root
   end
 
 end
