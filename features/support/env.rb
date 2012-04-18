@@ -46,10 +46,6 @@ class RightRailsTestWorld
     @app_console_mutex = Mutex.new
   end
 
-  def scenario_state
-    @scenario_state ||= OpenStruct.new
-  end
-
   # Return the app's RAILS_ROOT (shared across all scenarios/features in a given run!)
   def app_root
     @@app_root ||= Dir.mktmpdir('global_session')
@@ -187,28 +183,6 @@ class RightRailsTestWorld
       else
         raise ArgumentError, "Unknown :return #{thing_to_return}"
     end
-  end
-
-  # Return a Sequel data-access object for the app's database. Can be used to verify
-  # expectations about the database's schema or contents, or to inject test data into
-  # the database.
-  def app_db
-    unless @app_db
-      @app_db = Sequel.mysql(:host => 'localhost', :user => 'root',
-                        :database => app_db_name, :password => nil)
-      #cannot aggregate to Cucumber logger because Sequel is too noisy with INFO level
-      #@app_db.logger = Cucumber.logger
-    end
-
-    @app_db
-  end
-
-  # Find the next available serial number for a migration in the test app
-  def next_migration_version
-    migrations_dir = app_path('db', 'migrate')
-    FileUtils.mkdir_p(migrations_dir)
-    existing_versions = Dir[File.join(migrations_dir, '*.rb')].map { |p| Integer(File.basename(p).split('_', 2).first) }
-    (existing_versions.max || 0) + 1
   end
 
   # Set of methods to work with fixtures
