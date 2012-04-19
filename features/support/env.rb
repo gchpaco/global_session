@@ -217,10 +217,24 @@ class RightRailsTestWorld
     end
   end
 
-  def prepare_to_create
+  def prepare_to_create(rails_version)
+    # clean from previous application
     stop_application
     clean_cookies
     FileUtils.rm_rf(@@app_root) if defined? @@app_root
+
+    # export gemfile
+    template_path = File.join($basedir, 'fixtures', "rails_#{rails_version}", 'Gemfile.tmpl')
+    raise ArgumentError, "Gemfile for rails #{rails_version} does not exist." unless File.exist?(template_path)
+    File.open(app_path('Gemfile'), 'w') do |f|
+      f << File.read(template_path) + "gem 'global_session', :path => '#{$basedir}'\n"
+    end
+
+    # reassign path to gemfile and run bundle install
+    ENV['BUNDLE_GEMFILE'] = app_path('Gemfile')
+    Bundler.with_clean_env do
+      app_shell('bundle install')
+    end
   end
 
   # Run rails application

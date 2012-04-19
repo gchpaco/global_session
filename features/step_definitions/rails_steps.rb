@@ -1,11 +1,12 @@
 Given /^a Rails ([\d\.]+) application$/ do |rails_version|
-  ENV['RAILS_VERSION'] = rails_version
-  prepare_to_create
-  app_shell("rails _#{rails_version}_ . -q")
+  @rails_version = rails_version
+  prepare_to_create(@rails_version)
+
+  app_shell("rails _#{@rails_version}_ . -q")
 end
 
 Given /^configuration fixtures are loaded$/ do
-  load_fixtures(ENV['RAILS_VERSION'])
+  load_fixtures(@rails_version)
 end
 
 Given /^database created$/ do

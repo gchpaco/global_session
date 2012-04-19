@@ -38,15 +38,4 @@ Cucumber::Rake::Task.new do |t|
   t.cucumber_opts = %w{--tags ~@slow --color --format pretty}
 end
 
-namespace :cucumber do
-  desc "Prepare environment to test"
-  task :prepare do
-    ['2.3.5', '2.3.8'].each do |version|
-      puts "Prepare environment for rails #{version}"
-      ENV['RAILS_VERSION'] = version
-      system('bundle install > /dev/null')
-    end
-  end
-end
-
 CLEAN.include('pkg')
