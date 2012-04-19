@@ -8,15 +8,8 @@ group :development do
   gem 'flexmock',          '~> 0.8'
   gem 'httpclient'
   gem 'rack',              '~>1.1.0'
-
-  # In case we're going to support different Rails versions
-  case(ENV['RAILS_VERSION'])
-    when('2.3.8')
-      gem 'rails', '2.3.8'
-    else
-      gem 'actionpack', '2.3.5', :git=> 'git://github.com/xeger/actionpack.git'
-      gem 'rails', '2.3.5'
-  end
+  gem 'actionpack', '2.3.5', :git=> 'git://github.com/xeger/actionpack.git'
+  gem 'rails', '2.3.5'
 end
 
 group :cucumber do
