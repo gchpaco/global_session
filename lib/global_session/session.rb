@@ -240,6 +240,7 @@ module GlobalSession
       minutes = Integer(@configuration['timeout'])
       expired_at ||= Time.at(Time.now.utc + 60 * minutes)
       @expired_at = expired_at
+      @created_at = Time.now.utc
       @dirty_secure = true
     end
 

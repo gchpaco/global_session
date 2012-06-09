@@ -9,7 +9,7 @@ GIT
 PATH
   remote: .
   specs:
-    global_session (1.0.9)
+    global_session (1.0.10)
       json (~> 1.4)
       rack-contrib (~> 1.0)
       uuidtools (>= 1.0)
