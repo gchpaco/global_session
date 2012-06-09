@@ -136,4 +136,31 @@ describe GlobalSession::Session do
       end
     end
   end
+
+  context 'given a valid session' do
+    before(:each) do
+      mock_config('test/trust', ['authority1'])
+      mock_config('test/authority', 'authority1')
+      @directory = GlobalSession::Directory.new(mock_config, @keystore.dir)
+      @session   = GlobalSession::Session.new(@directory)
+    end
+
+    context :renew! do
+      it 'updates created_at' do
+        old = @session.created_at
+        future_time = Time.at(Time.now.to_i + 5)
+        flexmock(Time).should_receive(:now).and_return future_time
+        @session.renew!
+        @session.created_at.should_not == old
+      end
+
+      it 'updates expired_at' do
+        old = @session.expired_at
+        future_time = Time.at(Time.now.to_i + 5)
+        flexmock(Time).should_receive(:now).and_return future_time
+        @session.renew!
+        @session.expired_at.should_not == old
+      end
+    end
+  end
 end
