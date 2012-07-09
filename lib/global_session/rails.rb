@@ -41,14 +41,40 @@ end
 
 module GlobalSession
   module Rails
-    def self.activate(config)
-      authorities = File.join(::Rails.root, 'config', 'authorities')
-      hgs_config  = ActionController::Base.global_session_config
-      hgs_dir     = GlobalSession::Directory.new(hgs_config, authorities)
+    class <<self
+      # Single Configuration object used by entire Rails app
+      attr_accessor :configuration
+
+      # Single Directory object used by entire Rails app
+      attr_accessor :directory
+    end
+
+    def self.activate(rails_config, &block)
+      config_file = File.join(::Rails.root, 'config', 'global_session.yml')
+      self.configuration = GlobalSession::Configuration.new(config_file, ::Rails.env)
+
+      dir_name = self.configuration['directory'] || 'GlobalSession::Directory'
+      begin
+        dir_klass = dir_name.constantize
+      rescue NameError => e
+        raise GlobalSession::ConfigurationError,
+              "Unknown/malformed directory class '#{dir_name}' in config file: #{e.message}"
+      end
+
+      unless dir_klass.ancestors.include?(GlobalSession::Directory)
+        raise GlobalSession::ConfigurationError,
+              "Specified directory class '#{dir_name}' does not inherit from GlobalSession::Directory"
+      end
+
+      authorities_dir = File.join(::Rails.root, 'config', 'authorities')
+      self.directory = dir_klass.new(self.configuration, authorities_dir)
 
       # Add our middleware to the stack.
-      config.middleware.use ::Rack::Cookies
-      config.middleware.use ::Rack::GlobalSession, hgs_config, hgs_dir
+      rails_config.middleware.use(::Rack::Cookies)
+      rails_config.middleware.use(::Rack::GlobalSession,
+                                    self.configuration,
+                                    self.directory,
+                                    &block)
 
       return true
     end

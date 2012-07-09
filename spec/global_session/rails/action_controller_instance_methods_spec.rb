@@ -22,14 +22,14 @@ describe GlobalSession::Rails::ActionControllerInstanceMethods do
     mock_config('test/trust', ['authority1'])
     mock_config('test/authority', 'authority1')
 
-    ActionController::Base.global_session_config = mock_config
-
-    @directory        = GlobalSession::Directory.new(mock_config, @keystore.dir)
+    GlobalSession::Rails.configuration = mock_config
+    GlobalSession::Rails.directory = GlobalSession::Directory.new(mock_config, @keystore.dir)
+    @directory        = GlobalSession::Rails.directory
     @original_session = GlobalSession::Session.new(@directory)
     @cookie           = @original_session.to_s
 
     @klass = Class.new(StubController) do
-      has_global_session :integrated=>true
+      has_global_session
     end
 
     @controller = @klass.new( {'global_session'=>@original_session}, 
@@ -54,65 +54,17 @@ describe GlobalSession::Rails::ActionControllerInstanceMethods do
         }.should raise_error(GlobalSession::ExpiredSession)
       end
     end
-  end
 
-  context :global_session_skip_update do
-    it 'should set the appropriate Rack env' do
-      @controller.global_session_skip_update
-      @controller.request.env['global_session.req.update'].should be_false
+    context 'with global_session_options[:enabled] == false' do
+      it 'should skip initialization and tell the middleware not to do anything'
     end
-  end
 
-  context :global_session_skip_renew do
-    it 'should set the appropriate Rack env' do
-      @controller.global_session_skip_renew
-      @controller.request.env['global_session.req.renew'].should be_false
+    context 'with global_session_options[:renew] == false' do
+      it 'should tell the middleware not to renew the cookie'
     end
-  end
 
-  context :session_with_global_session do
-    context 'when no global session has been instantiated yet' do
-      before(:each) do
-        @controller.global_session.should be_nil
-      end
-
-      it 'should return the Rails session' do
-        flexmock(@controller).should_receive(:session_without_global_session).and_return('local session')
-        @controller.session.should == 'local session'
-      end
-    end
-    context 'when a global session has been instantiated' do
-      before(:each) do
-        @controller.global_session_initialize
-      end
-
-      it 'should return an integrated session' do
-        GlobalSession::IntegratedSession.should === @controller.session
-      end
-    end
-    context 'when the global session has been reset' do
-      before(:each) do
-        @controller.global_session_initialize
-        @old_integrated_session = @controller.session
-        GlobalSession::IntegratedSession.should === @old_integrated_session
-        @controller.instance_variable_set(:@global_session, 'new global session')
-      end
-
-      it 'should return a fresh integrated session' do
-        @controller.session.should_not == @old_integrated_session
-      end
-    end
-    context 'when the local session has been reset' do
-      before(:each) do
-        @controller.global_session_initialize
-        @old_integrated_session = @controller.session
-        GlobalSession::IntegratedSession.should === @old_integrated_session
-        @controller.request.session = 'new local session'
-      end
-
-      it 'should return a fresh integrated session' do
-        @controller.request.session.should_not == @old_integrated_session
-      end
+    context 'with global_session_options[:renew] == false' do
+      it 'should tell the middleware not to renew the cookie'
     end
   end
 end
