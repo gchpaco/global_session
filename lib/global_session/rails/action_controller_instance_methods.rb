@@ -43,6 +43,8 @@ module GlobalSession
         unless base.instance_methods.include?("log_processing_without_global_session")
           base.alias_method_chain :log_processing, :global_session
         end
+
+        base.before_filter :global_session_initialize
       end
 
       # Shortcut accessor for global session configuration object.
