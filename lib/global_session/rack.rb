@@ -148,9 +148,15 @@ module GlobalSession
 
         begin
           domain = @configuration['cookie']['domain'] || env['SERVER_NAME']
-          if env['global_session'] && env['global_session'].valid?
-            value = env['global_session'].to_s
-            expires = @configuration['ephemeral'] ? nil : env['global_session'].expired_at
+          if env['global_session']
+            global_session = env['global_session']
+            unless global_session.valid?
+              invalidated_uuid = global_session.id
+              global_session = @directory.create_session
+              @directory.session_invalidated(invalidated_uuid, global_session.id)
+            end
+            value = global_session.to_s
+            expires = @configuration['ephemeral'] ? nil : global_session.expired_at
             unless env['rack.cookies'].has_key?(@cookie_name) && env['rack.cookies'][@cookie_name] == value
               env['rack.cookies'][@cookie_name] =
                   {:value => value, :domain => domain, :expires => expires, :httponly=>true}
