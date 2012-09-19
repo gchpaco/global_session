@@ -48,6 +48,11 @@ module GlobalSession
       return Encoding::JSON.load(json)
     end
 
+    # @return a representation of the object suitable for printing to the console
+    def inspect
+      "<GlobalSession::Session @id=\"#{@id}\">"
+    end
+
     # Create a new global session object.
     #
     # === Parameters

@@ -73,6 +73,11 @@ module GlobalSession
   # you are integrating; see GlobalSession::Rails for more information.
   #
   class Configuration
+    # @return a representation of the object suitable for printing to the console
+    def inspect
+      "<GlobalSession::Configuration @environment=\"#{@environment}\">"
+    end
+
     # Create a new Configuration object
     #
     # === Parameters
