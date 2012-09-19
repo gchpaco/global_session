@@ -50,7 +50,7 @@ module GlobalSession
 
     # @return a representation of the object suitable for printing to the console
     def inspect
-      "<GlobalSession::Session @id=\"#{@id}\">"
+      "<#{self.class.name} @id=#{@id.inspect}>"
     end
 
     # Create a new global session object.

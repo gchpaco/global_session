@@ -75,7 +75,7 @@ module GlobalSession
   class Configuration
     # @return a representation of the object suitable for printing to the console
     def inspect
-      "<GlobalSession::Configuration @environment=\"#{@environment}\">"
+      "<#{self.class.name} @environment=#{@environment.inspect}>"
     end
 
     # Create a new Configuration object

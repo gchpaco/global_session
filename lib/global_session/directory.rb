@@ -54,6 +54,11 @@ module GlobalSession
   class Directory
     attr_reader :configuration, :authorities, :private_key
 
+    # @return a representation of the object suitable for printing to the console
+    def inspect
+      "<#{self.class.name} @configuration=#{@configuration.inspect}>"
+    end
+
     # Create a new Directory.
     #
     # === Parameters
