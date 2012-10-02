@@ -162,5 +162,20 @@ describe GlobalSession::Session do
         @session.expired_at.should_not == old
       end
     end
+
+    context :to_hash do
+      before(:each) do
+        @hash = @session.to_hash
+      end
+
+      it 'includes metadata' do
+        @hash[:metadata][:id].should == @session.id
+        @hash[:metadata][:created_at].should == @session.created_at
+        @hash[:metadata][:expired_at].should == @session.expired_at
+        @hash[:metadata][:authority].should == @session.authority
+        @hash[:signed].each_pair { |k,v| @session[k].should == v }
+        @hash[:insecure].each_pair { |k,v| @session[k].should == v }
+      end
+    end
   end
 end

@@ -80,6 +80,31 @@ module GlobalSession
       end
     end
 
+    # @return a Hash representation of the session with three subkeys: :metadata, :signed and :insecure
+    # @raise nothing -- does not raise; returns empty hash if there is a failure
+    def to_hash
+      hash = {}
+
+      md = {}
+      signed = {}
+      insecure = {}
+
+      hash[:metadata] = md
+      hash[:signed] = signed
+      hash[:insecure] = insecure
+
+      md[:id] = @id
+      md[:authority] = @authority
+      md[:created_at] = @created_at
+      md[:expired_at] = @expired_at
+      @signed.each_pair { |k, v| signed[k] = v }
+      @insecure.each_pair { |k, v| insecure[k] = v }
+
+      hash
+    rescue Exception => e
+      {}
+    end
+
     # Determine whether the session is valid. This method simply delegates to the
     # directory associated with this session.
     #
