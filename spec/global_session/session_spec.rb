@@ -177,5 +177,16 @@ describe GlobalSession::Session do
         @hash[:insecure].each_pair { |k,v| @session[k].should == v }
       end
     end
+
+    context :new_record? do
+      it 'should return true when the session was just created' do
+        @session.new_record?.should be_true
+      end
+
+      it 'should return false when the session was loaded from a cookie' do
+        loaded_session = GlobalSession::Session.new(@directory, @session.to_s)
+        loaded_session.new_record?.should be_false
+      end
+    end
   end
 end

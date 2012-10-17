@@ -80,6 +80,11 @@ module GlobalSession
       end
     end
 
+    # @return [true,false] true if this session was created in-process, false if it was initialized from a cookie
+    def new_record?
+      @cookie.nil?
+    end
+
     # @return a Hash representation of the session with three subkeys: :metadata, :signed and :insecure
     # @raise nothing -- does not raise; returns empty hash if there is a failure
     def to_hash
