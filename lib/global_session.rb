@@ -70,7 +70,6 @@ end
 #Make sure gem dependencies are activated.
 require 'uuidtools'
 require 'json'
-require 'active_support'
 
 #Require Ruby library dependencies
 require 'openssl'
