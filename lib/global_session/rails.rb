@@ -19,8 +19,6 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-basedir = File.dirname(__FILE__)
-
 require 'rack/contrib/cookies'
 require 'action_pack'
 require 'action_controller'

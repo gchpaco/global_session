@@ -75,14 +75,14 @@ require 'json'
 require 'openssl'
 
 #Require the core suite of GlobalSession classes and modules
-basedir = File.dirname(__FILE__)
-require File.join(basedir, 'global_session', 'configuration')
-require File.join(basedir, 'global_session', 'directory')
-require File.join(basedir, 'global_session', 'encoding')
-require File.join(basedir, 'global_session', 'session')
+require 'global_session/configuration'
+require 'global_session/directory'
+require 'global_session/encoding'
+require 'global_session/session'
 
 #Preemptively try to activate the Rails plugin, ignoring errors
 begin
-  require File.join(basedir, 'global_session', 'rails')  
+  require 'global_session/rails'
 rescue Exception => e
+  #no-op
 end
