@@ -68,7 +68,7 @@ module GlobalSession
 end
 
 #Make sure gem dependencies are activated.
-require 'uuidtools'
+require 'right_support'
 require 'json'
 
 #Require Ruby library dependencies

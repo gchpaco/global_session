@@ -23,9 +23,6 @@
 require 'set'
 require 'zlib'
 
-# Gem dependencies
-require 'uuidtools'
-
 module GlobalSession
   # Ladies and gentlemen: the one and only, star of the show, GLOBAL SESSION!
   #
@@ -389,15 +386,7 @@ module GlobalSession
       @insecure        = {}
       @created_at      = Time.now.utc
       @authority       = @directory.local_authority_name
-
-      if defined?(::UUIDTools) # UUIDTools v2
-        @id = ::UUIDTools::UUID.timestamp_create.to_s
-      elsif defined?(::UUID)   # UUIDTools v1
-        @id = ::UUID.timestamp_create.to_s
-      else
-        raise TypeError, "Neither UUIDTools nor UUID defined; unsupported UUIDTools version?"
-      end
-
+      @id              = RightSupport::Data::UUID.generate
       renew!
     end
 

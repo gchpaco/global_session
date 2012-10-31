@@ -7,8 +7,8 @@ spec = Gem::Specification.new do |s|
   s.required_ruby_version = Gem::Requirement.new(">= 1.8.7")
 
   s.name    = 'global_session'
-  s.version = '1.0.16'
-  s.date    = '2012-10-22'
+  s.version = '1.0.17'
+  s.date    = '2012-10-30'
 
   s.authors = ['Tony Spataro']
   s.email   = 'support@rightscale.com'
@@ -17,7 +17,9 @@ spec = Gem::Specification.new do |s|
   s.summary = %q{Secure single-domain session sharing plugin for Rails.}
   s.description = %q{This plugin for Rails allows several web apps in an authentication domain to share session state, facilitating single sign-on in a distributed web app. It only provides session sharing and does not concern itself with authentication or replication of the user database.}
 
-  s.add_runtime_dependency('uuidtools', [">= 1.0"])
+  s.add_runtime_dependency('right_support', ["~> 2.5"])
+
+  s.add_runtime_dependency('simple_uuid', [">= 0.2.0"])
   s.add_runtime_dependency('json', ["~> 1.4"])
   s.add_runtime_dependency('rack-contrib', ["~> 1.0"])
 
