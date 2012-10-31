@@ -33,9 +33,9 @@ describe GlobalSession::Session do
       @cookie           = @original_session.to_s
     end
 
-    context 'when everything is copascetic' do
+    context 'when everything is copacetic' do
       it 'should succeed' do
-        GlobalSession::Session.should === GlobalSession::Session.new(@directory, @cookie)
+        GlobalSession::Session.new(@directory, @cookie).should be_a(GlobalSession::Session::Abstract)
       end
     end
 
@@ -43,7 +43,7 @@ describe GlobalSession::Session do
       it 'should not recompute the signature' do
         flexmock(@directory.authorities['authority1']).should_receive(:public_decrypt).never
         valid_digest = @original_session.signature_digest
-        GlobalSession::Session.should === GlobalSession::Session.new(@directory, @cookie, valid_digest)
+        GlobalSession::Session.new(@directory, @cookie, valid_digest).should be_a(GlobalSession::Session::Abstract)
       end
     end
 
@@ -58,7 +58,7 @@ describe GlobalSession::Session do
         @cookie = GlobalSession::Encoding::Base64Cookie.dump(zbin)        
       end
       it 'should succeed' do
-        GlobalSession::Session.should === GlobalSession::Session.new(@directory, @cookie)
+        GlobalSession::Session.new(@directory, @cookie).should be_a(GlobalSession::Session::Abstract)
       end
     end
 
