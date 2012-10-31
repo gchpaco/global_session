@@ -197,7 +197,7 @@ describe GlobalSession::Session do
 
       1_000.times do
         uuid = RightSupport::Data::UUID.generate
-        uuid.gsub!(/[^[0-9a-fA-F]/, '')
+        uuid.gsub!(/[^0-9a-fA-F]/, '')
         uuids << uuid
       end
 
