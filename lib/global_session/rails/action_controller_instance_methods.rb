@@ -37,9 +37,6 @@ module GlobalSession
     module ActionControllerInstanceMethods
       def self.included(base) # :nodoc:
         #Make sure a superclass hasn't already chained the methods...
-        unless base.instance_methods.include?("session_without_global_session")
-          base.alias_method_chain :session, :global_session
-        end
         unless base.instance_methods.include?("log_processing_without_global_session")
           base.alias_method_chain :log_processing, :global_session
         end
@@ -65,26 +62,6 @@ module GlobalSession
       # session(Session):: the global session associated with the current request, nil if none
       def global_session
         @global_session
-      end
-
-      # Aliased version of ActionController::Base#session which will return the integrated
-      # global-and-local session object (IntegratedSession).
-      #
-      # === Return
-      # session(IntegratedSession):: the integrated session
-      def session_with_global_session
-        if global_session_options[:integrated] && global_session
-          unless @integrated_session &&
-                 (@integrated_session.local == session_without_global_session) && 
-                 (@integrated_session.global == global_session)
-            @integrated_session =
-              IntegratedSession.new(session_without_global_session, global_session)
-          end
-          
-          return @integrated_session
-        else
-          return session_without_global_session
-        end
       end
 
       # Filter to initialize the global session.

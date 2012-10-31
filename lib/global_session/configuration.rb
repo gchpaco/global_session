@@ -32,7 +32,6 @@ module GlobalSession
   # * attributes
   #    * signed
   #    * insecure
-  # * integrated
   # * ephemeral
   # * local_session_integration
   # * timeout
@@ -119,7 +118,7 @@ module GlobalSession
     end
 
     def validate # :nodoc
-      ['attributes/signed', 'integrated', 'cookie/name',
+      ['attributes/signed', 'cookie/name',
        'timeout'].each {|k| validate_presence_of k}
     end
 
