@@ -54,6 +54,11 @@ module GlobalSession
   class Directory
     attr_reader :configuration, :authorities, :private_key
 
+    # @return a representation of the object suitable for printing to the console
+    def inspect
+      "<#{self.class.name} @configuration=#{@configuration.inspect}>"
+    end
+
     # Create a new Directory.
     #
     # === Parameters
@@ -147,6 +152,19 @@ module GlobalSession
     # true:: Always returns true
     def report_invalid_session(uuid, expired_at)
       @invalid_sessions << uuid
+    end
+
+    # Callback used by GlobalSession::Rack::Middleware when the application invalidated
+    # current global_session object. This callback could help application to get data related 
+    # to the previous global session (old_global_session_id), and put it to new global session
+    # (new_global_sesion_id)
+
+    # invalidated_uuid(String):: Invalidated Global session UUID
+    # new_uuid(String):: Newly created Global session UUID
+    # === Return
+    # true: Always returns true
+    def session_invalidated(invalidated_uuid, new_uuid)
+      true
     end
   end  
 end

@@ -23,9 +23,6 @@
 require 'set'
 require 'zlib'
 
-# Gem dependencies
-require 'uuidtools'
-
 module GlobalSession
   # Ladies and gentlemen: the one and only, star of the show, GLOBAL SESSION!
   #
@@ -46,6 +43,11 @@ module GlobalSession
       zbin = Encoding::Base64Cookie.load(cookie)
       json = Zlib::Inflate.inflate(zbin)
       return Encoding::JSON.load(json)
+    end
+
+    # @return a representation of the object suitable for printing to the console
+    def inspect
+      "<#{self.class.name} @id=#{@id.inspect}>"
     end
 
     # Create a new global session object.
@@ -73,6 +75,36 @@ module GlobalSession
       else
         create_invalid
       end
+    end
+
+    # @return [true,false] true if this session was created in-process, false if it was initialized from a cookie
+    def new_record?
+      @cookie.nil?
+    end
+
+    # @return a Hash representation of the session with three subkeys: :metadata, :signed and :insecure
+    # @raise nothing -- does not raise; returns empty hash if there is a failure
+    def to_hash
+      hash = {}
+
+      md = {}
+      signed = {}
+      insecure = {}
+
+      hash[:metadata] = md
+      hash[:signed] = signed
+      hash[:insecure] = insecure
+
+      md[:id] = @id
+      md[:authority] = @authority
+      md[:created_at] = @created_at
+      md[:expired_at] = @expired_at
+      @signed.each_pair { |k, v| signed[k] = v }
+      @insecure.each_pair { |k, v| insecure[k] = v }
+
+      hash
+    rescue Exception => e
+      {}
     end
 
     # Determine whether the session is valid. This method simply delegates to the
@@ -354,15 +386,7 @@ module GlobalSession
       @insecure        = {}
       @created_at      = Time.now.utc
       @authority       = @directory.local_authority_name
-
-      if defined?(::UUIDTools) # UUIDTools v2
-        @id = ::UUIDTools::UUID.timestamp_create.to_s
-      elsif defined?(::UUID)   # UUIDTools v1
-        @id = ::UUID.timestamp_create.to_s
-      else
-        raise TypeError, "Neither UUIDTools nor UUID defined; unsupported UUIDTools version?"
-      end
-
+      @id              = RightSupport::Data::UUID.generate
       renew!
     end
 

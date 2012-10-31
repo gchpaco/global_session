@@ -68,9 +68,8 @@ module GlobalSession
 end
 
 #Make sure gem dependencies are activated.
-require 'uuidtools'
+require 'right_support'
 require 'json'
-require 'active_support'
 
 #Require Ruby library dependencies
 require 'openssl'
@@ -81,6 +80,7 @@ require File.join(basedir, 'global_session', 'configuration')
 require File.join(basedir, 'global_session', 'directory')
 require File.join(basedir, 'global_session', 'encoding')
 require File.join(basedir, 'global_session', 'session')
+require File.join(basedir, 'global_session', 'integrated_session')
 
 #Preemptively try to activate the Rails plugin, ignoring errors
 begin

@@ -37,11 +37,22 @@ module GlobalSession
     module ActionControllerInstanceMethods
       def self.included(base) # :nodoc:
         #Make sure a superclass hasn't already chained the methods...
+        unless base.instance_methods.include?("session_without_global_session")
+          base.alias_method_chain :session, :global_session
+        end
         unless base.instance_methods.include?("log_processing_without_global_session")
           base.alias_method_chain :log_processing, :global_session
         end
 
         base.before_filter :global_session_initialize
+      end
+
+      # Shortcut accessor for global session configuration object.
+      #
+      # === Return
+      # config(GlobalSession::Configuration)
+      def global_session_config
+        request.env['global_session.config']
       end
 
       def global_session_options
@@ -54,6 +65,26 @@ module GlobalSession
       # session(Session):: the global session associated with the current request, nil if none
       def global_session
         @global_session
+      end
+
+      # Aliased version of ActionController::Base#session which will return the integrated
+      # global-and-local session object (IntegratedSession).
+      #
+      # === Return
+      # session(IntegratedSession):: the integrated session
+      def session_with_global_session
+        if global_session_options[:integrated] && global_session
+          unless @integrated_session &&
+                 (@integrated_session.local == session_without_global_session) && 
+                 (@integrated_session.global == global_session)
+            @integrated_session =
+              IntegratedSession.new(session_without_global_session, global_session)
+          end
+          
+          return @integrated_session
+        else
+          return session_without_global_session
+        end
       end
 
       # Filter to initialize the global session.
@@ -75,13 +106,30 @@ module GlobalSession
           request.env['global_session.req.renew'] = false
           request.env['global_session.req.update'] = false
         else
-          request.env['global_session.req.renew'] = options[:renew]
           error = request.env['global_session.error']
-          raise error if error.present? && options[:raise]
+          raise error unless error.nil? || options[:raise] == false
           @global_session = request.env['global_session']
         end
 
         return true
+      end
+
+      # Filter to disable auto-renewal of the session.
+      #
+      # === Return
+      # true:: Always returns true
+      def global_session_skip_renew
+        request.env['global_session.req.renew'] = false
+        true
+      end
+
+      # Filter to disable updating of the session cookie
+      #
+      # === Return
+      # true:: Always returns true
+      def global_session_skip_update
+        request.env['global_session.req.update'] = false
+        true
       end
 
       # Override for the ActionController method of the same name that logs

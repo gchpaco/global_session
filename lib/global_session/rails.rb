@@ -75,8 +75,8 @@ module GlobalSession
       self.directory = dir_klass.new(self.configuration, authorities_dir)
 
       # Add our middleware to the stack.
-      rails_config.middleware.use(::Rack::Cookies)
-      rails_config.middleware.use(::Rack::GlobalSession,
+      rails_config.middleware.insert_before(ActionController::Base.session_store, ::Rack::Cookies)
+      rails_config.middleware.insert_before(ActionController::Base.session_store, ::Rack::GlobalSession,
                                     self.configuration,
                                     self.directory,
                                     &block)

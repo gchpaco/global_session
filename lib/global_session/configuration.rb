@@ -32,6 +32,7 @@ module GlobalSession
   # * attributes
   #    * signed
   #    * insecure
+  # * integrated
   # * ephemeral
   # * local_session_integration
   # * timeout
@@ -73,6 +74,11 @@ module GlobalSession
   # you are integrating; see GlobalSession::Rails for more information.
   #
   class Configuration
+    # @return a representation of the object suitable for printing to the console
+    def inspect
+      "<#{self.class.name} @environment=#{@environment.inspect}>"
+    end
+
     # Create a new Configuration object
     #
     # === Parameters
@@ -113,8 +119,7 @@ module GlobalSession
     end
 
     def validate # :nodoc
-      ['attributes/signed',
-       'cookie/name',
+      ['attributes/signed', 'integrated', 'cookie/name',
        'timeout'].each {|k| validate_presence_of k}
     end
 

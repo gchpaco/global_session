@@ -223,9 +223,17 @@ describe GlobalSession::Rack::Middleware do
     end
 
     context 'when the session becomes invalid during a request' do
-      it 'should reset the session and its cookie' do
-        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:value=>nil, :domain=>'baz.foobar.com'))
-        @inner_app.should_receive(:call).and_return { |env| env['global_session'].invalidate! ; [] }
+      before(:each) do
+        @inner_app.should_receive(:call).and_return { |env| env['global_session'].invalidate!; [] }
+      end
+
+      it 'should generate new session and save it cookie' do
+        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.on { |x| x[:value] != nil && x[:domain] == 'baz.foobar.com' })
+        @app.call(@env)
+      end
+
+      it 'should send session_invalidated message to directory' do
+        flexmock(@directory).should_receive(:session_invalidated).once.and_return(true)
         @app.call(@env)
       end
     end
