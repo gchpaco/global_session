@@ -25,7 +25,7 @@ Feature: Rails 2.3.5
 
   Scenario: configuring global_session middleware
     Given global_session added as a middleware
-    When I lunch my application on 11415 port
+    When I launch my application
     Then I should have my application up and running
 
   Scenario: initializing global_session cookies
@@ -45,13 +45,6 @@ Feature: Rails 2.3.5
     And I have 2 cookie variable called:
       | global_session |
       | _local_session |
-
-  Scenario: local session integration
-    Given global_session configured with local session integration
-    When I send GET request 'happy/index'
-    Then I should receive message "Be Happy!!!"
-    And I have 1 cookie variable called:
-      | global_session |
 
   Scenario: save data to the local session
     When I send POST request 'happy/update' with the following:

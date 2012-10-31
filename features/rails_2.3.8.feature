@@ -25,7 +25,7 @@ Feature: Rails 2.3.8
 
   Scenario: configuring global_session middleware
     Given global_session added as a middleware
-    When I lunch my application on 11415 port
+    When I launch my application
     Then I should have my application up and running
 
   Scenario: initializing global_session cookies

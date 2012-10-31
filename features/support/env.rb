@@ -31,16 +31,21 @@ require 'httpclient'
 require 'spec/stubs/cucumber'
 require 'spec/spec_helper'
 
-#for String#to_const and other utility stuff
-# require 'right_support'
-
-$basedir = File.expand_path('../../..', __FILE__)
-$libdir  = File.join($basedir, 'lib')
-require File.join($libdir, 'global_session')
+require 'global_session'
 
 class RightRailsTestWorld
   class ShellCommandFailed < Exception; end
   include SpecHelper
+
+  @@app_root = Dir.mktmpdir('global_session')
+  @@database_name ||= "temp_global_session_#{Time.now.to_i}"
+  @@http_client = nil
+
+  attr_accessor :server_pid
+
+  def application_port
+    11415
+  end
 
   def initialize
     @app_console_mutex = Mutex.new
@@ -48,8 +53,6 @@ class RightRailsTestWorld
 
   # Return the app's RAILS_ROOT (shared across all scenarios/features in a given run!)
   def app_root
-    @@app_root ||= Dir.mktmpdir('global_session')
-
     unless File.directory?(@@app_root)
       FileUtils.mkdir_p(@@app_root)
     end
@@ -64,7 +67,6 @@ class RightRailsTestWorld
 
   # Give the app's database name (shared across all scenarios/features in a given run!)
   def app_db_name
-    @@database_name ||= "temp_global_session_#{Time.now.to_i}"
     @@database_name
   end
 
@@ -106,6 +108,7 @@ class RightRailsTestWorld
   end
 
   MAX_CONSOLE_TIME = 60.0
+  BASEDIR = File.expand_path('../../..', __FILE__)
 
   # Run a console command using script/console
   def app_console(cmd, options={})
@@ -187,13 +190,13 @@ class RightRailsTestWorld
 
   # Set of methods to work with fixtures
   def load_fixtures(rails_version)
-    rails_fixtures_path = File.join($basedir, 'fixtures', "rails_#{rails_version}", '.')
+    rails_fixtures_path = File.join(BASEDIR, 'fixtures', "rails_#{rails_version}", '.')
     raise ArgumentError, "Fixtures for rails #{rails_version} does not exist." unless File.exist?(rails_fixtures_path)
     FileUtils.cp_r(rails_fixtures_path, app_root)
   end
 
   def install_global_session_gem
-    FileUtils.cp_r($basedir, app_path('vendor', 'plugins', 'global_session'))
+    FileUtils.cp_r(BASEDIR, app_path('vendor', 'plugins', 'global_session'))
   end
 
   def add_global_session_gem
@@ -224,10 +227,10 @@ class RightRailsTestWorld
     FileUtils.rm_rf(@@app_root) if defined? @@app_root
 
     # export gemfile
-    template_path = File.join($basedir, 'fixtures', "rails_#{rails_version}", 'Gemfile.tmpl')
+    template_path = File.join(BASEDIR, 'fixtures', "rails_#{rails_version}", 'Gemfile.tmpl')
     raise ArgumentError, "Gemfile for rails #{rails_version} does not exist." unless File.exist?(template_path)
     File.open(app_path('Gemfile'), 'w') do |f|
-      f << File.read(template_path) + "gem 'global_session', :path => '#{$basedir}'\n"
+      f << File.read(template_path) + "gem 'global_session', :path => '#{BASEDIR}'\n"
     end
 
     # reassign path to gemfile and run bundle install
@@ -238,37 +241,37 @@ class RightRailsTestWorld
   end
 
   # Run rails application
-  def run_application_at(port)
-    @@port = port
-    app_shell("./script/server -p #{port} -d")
+  def run_application
+    app_shell("./script/server -p #{application_port} -d")
     loop do
       begin
-        TCPSocket.new('localhost', port).close
+        TCPSocket.new('localhost', application_port).close
         break
       rescue Errno::ECONNREFUSED
+        Thread.pass
       end
     end
-    @@server_pid = File.read(app_path('tmp', 'pids', 'server.pid')).to_i
+    self.server_pid = File.read(app_path('tmp', 'pids', 'server.pid')).to_i
   end
 
   def stop_application
-    Process.kill("KILL", @@server_pid) if defined? @@server_pid
+    Process.kill("KILL", server_pid) unless server_pid.nil?
   end
 
   def restart_application
     stop_application
     clean_cookies
-    run_application_at(@@port)
+    run_application
   end
 
   # http client
   def http_client
-    @@client ||= HTTPClient.new
+    @@http_client ||= HTTPClient.new
   end
 
   # Make request to our application
   def make_request(method, path, params = nil)
-    http_client.request(method, "http://localhost:#{@@port}/#{path}", params)
+    http_client.request(method, "http://localhost:#{application_port}/#{path}", params)
   end
 
   def clean_cookies
@@ -276,7 +279,7 @@ class RightRailsTestWorld
   end
 
   at_exit do
-    Process.kill("KILL", @@server_pid) if defined? @@server_pid
+    Process.kill("KILL", @server_pid) if defined? @server_pid
     FileUtils.rm_rf(@@app_root) if defined? @@app_root
   end
 

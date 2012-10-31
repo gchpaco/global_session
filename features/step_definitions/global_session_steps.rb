@@ -21,7 +21,7 @@ When /^I load it from cookie successful$/ do
 end
 
 Then /^everything is ok$/ do
-  GlobalSession::Session.should === GlobalSession::Session.new(@directory, @cookie)
+  GlobalSession::Session.new(@directory, @cookie).should be_a(GlobalSession::Session::Abstract)
 end
 
 When /^a trusted signature is passed in$/ do
@@ -33,7 +33,7 @@ When /^I have a valid digest$/ do
 end
 
 Then /^I should not recompute the signature$/ do
-  GlobalSession::Session.should === GlobalSession::Session.new(@directory, @cookie, @valid_digest)
+  GlobalSession::Session.new(@directory, @cookie, @valid_digest).should be_a(GlobalSession::Session::Abstract)
 end
 
 When /^an insecure attribute has changed$/ do

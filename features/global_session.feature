@@ -14,7 +14,7 @@ Feature: GlobalSession
       | test/trust                  | ['authority1']      |
       | test/authority              | 'authority1'        |
 
-  Scenario: everything is copascetic
+  Scenario: everything is copacetic
     When I load it from cookie successful
     Then everything is ok
 

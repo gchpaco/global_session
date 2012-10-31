@@ -56,20 +56,14 @@ Given /^global_session added as a middleware$/ do
   add_global_session_middleware
 end
 
-When /^I lunch my application on (\d+) port$/ do |port|
-  @port = port
-  run_application_at(@port)
+When /^I launch my application$/ do
+  run_application
 end
 
 Then /^I should have my application up and running$/ do
   lambda {
-    TCPSocket.new('localhost', @port).close
+    TCPSocket.new('localhost', application_port).close
   }.should_not raise_error(Errno::ECONNREFUSED)
-end
-
-Given /^global_session configured with local session integration$/ do
-  add_local_session_integration
-  restart_application
 end
 
 When /^I send (.+) request '(.+)'$/ do |method, path|
@@ -81,6 +75,9 @@ Then /^I should receive message "(.+)"$/ do |message|
 end
 
 Then /^I have (\d+) cookie variable called:$/ do |cookie_num, cookie_names|
+  if cookie_num.to_i == 1
+    require 'ruby-debug' ; debugger
+  end
   http_client.cookies.size.should be_equal(cookie_num.to_i)
   http_client.cookies.map(&:name).sort.should == cookie_names.raw.flatten.sort
 end
