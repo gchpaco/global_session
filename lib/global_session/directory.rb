@@ -158,7 +158,9 @@ module GlobalSession
     # current global_session object. This callback could help application to get data related 
     # to the previous global session (old_global_session_id), and put it to new global session
     # (new_global_sesion_id)
-
+    #
+    # @deprecated this method will be removed with GlobalSession 2.0; do not use!
+    #
     # invalidated_uuid(String):: Invalidated Global session UUID
     # new_uuid(String):: Newly created Global session UUID
     # === Return

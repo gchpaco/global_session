@@ -27,6 +27,8 @@ module GlobalSession
     # Global session middleware.  Note: this class relies on
     # Rack::Cookies being used higher up in the chain.
     class Middleware
+      LOCAL_SESSION_KEY = "rack.session".freeze
+
       # Make a new global session.
       #
       # The optional block here controls an alternate ticket retrieval
@@ -146,29 +148,30 @@ module GlobalSession
         return unless env['global_session'].directory.local_authority_name
         return if env['global_session.req.update'] == false
 
-        begin
-          domain = @configuration['cookie']['domain'] || env['SERVER_NAME']
-          if env['global_session']
-            global_session = env['global_session']
-            unless global_session.valid?
-              invalidated_uuid = global_session.id
-              global_session = @directory.create_session
-              @directory.session_invalidated(invalidated_uuid, global_session.id)
-            end
-            value = global_session.to_s
-            expires = @configuration['ephemeral'] ? nil : global_session.expired_at
-            unless env['rack.cookies'].has_key?(@cookie_name) && env['rack.cookies'][@cookie_name] == value
-              env['rack.cookies'][@cookie_name] =
-                  {:value => value, :domain => domain, :expires => expires, :httponly=>true}
-            end
-          else
-            # write an empty cookie
-            env['rack.cookies'][@cookie_name] = {:value => nil, :domain => domain, :expires => Time.at(0)}
+        domain = @configuration['cookie']['domain'] || env['SERVER_NAME']
+        session = env['global_session']
+
+        if session
+          unless session.valid?
+            old_session = session
+            session = @directory.create_session
+            perform_invalidation_callbacks(env, old_session, session)
+            env['global_session'] = session
           end
-        rescue Exception => e
-          wipe_cookie(env)
-          raise e
+
+          value = session.to_s
+          expires = @configuration['ephemeral'] ? nil : session.expired_at
+          unless env['rack.cookies'][@cookie_name] == value
+            env['rack.cookies'][@cookie_name] =
+                {:value => value, :domain => domain, :expires => expires, :httponly=>true}
+          end
+        else
+          # write an empty cookie
+          env['rack.cookies'][@cookie_name] = {:value => nil, :domain => domain, :expires => Time.at(0)}
         end
+      rescue Exception => e
+        wipe_cookie(env)
+        raise e
       end
 
       # Delete the global session cookie from the cookie jar.
@@ -206,6 +209,22 @@ module GlobalSession
         else
           raise e
         end
+      end
+
+      # Perform callbacks to directory and/or local session
+      # informing them that this session has been invalidated.
+      #
+      # === Parameters
+      # env(Hash):: the rack environment
+      # old_session(GlobalSession):: the now-invalidated session
+      # new_session(GlobalSession):: the new session that will be sent to the client
+      def perform_invalidation_callbacks(env, old_session, new_session)
+        @directory.session_invalidated(old_session.id, new_session.id)
+        if (local_session = env[LOCAL_SESSION_KEY]) && local_session.respond_to?(:rename!)
+          local_session.rename!(old_session, new_session)
+        end
+
+        true
       end
     end
   end

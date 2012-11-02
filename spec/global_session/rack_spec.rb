@@ -275,7 +275,7 @@ describe GlobalSession::Rack::Middleware do
 
     context 'with errors' do
       before(:each) do
-        @cookie_jar.should_receive(:[]).with('global_session_cookie').never
+        @cookie_jar.should_receive(:[]).with('global_session_cookie') #any number of times
         @fresh_session = GlobalSession::Session.new(@directory)
       end
 
