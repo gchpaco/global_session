@@ -46,16 +46,6 @@ Feature: Rails 2.3.5
       | global_session |
       | _local_session |
 
-  Scenario: save data to the local session
-    When I send POST request 'happy/update' with the following:
-      | key   | my_data       |
-      | value | hello cookies |
-    Then I should be redirected to 'happy/index'
-    And I should receive in session the following variables:
-      | my_data | hello cookies |
-    And I have 1 cookie variable called:
-      | global_session |
-
   Scenario: retrieve data from the local session
     Given I have data stored in local session:
       | woohoo | yabadabadoo |

@@ -75,10 +75,7 @@ Then /^I should receive message "(.+)"$/ do |message|
 end
 
 Then /^I have (\d+) cookie variable called:$/ do |cookie_num, cookie_names|
-  if cookie_num.to_i == 1
-    require 'ruby-debug' ; debugger
-  end
-  http_client.cookies.size.should be_equal(cookie_num.to_i)
+  http_client.cookies.should have(cookie_num.to_i).items
   http_client.cookies.map(&:name).sort.should == cookie_names.raw.flatten.sort
 end
 
