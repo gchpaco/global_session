@@ -5,18 +5,18 @@ Given /^a Rails ([\d\.]+) application$/ do |rails_version|
   app_shell("rails _#{@rails_version}_ . -q")
 end
 
-Given /^configuration fixtures are loaded$/ do
+Given /^the app is configured to use global_session$/ do
   load_fixtures(@rails_version)
 end
 
-Given /^database created$/ do
+Given /^a database$/ do
   app_shell('rake db:drop', :ignore_errors=>true)
   app_shell('rake db:create')
   app_shell('rake db:sessions:create')
   app_shell('rake db:migrate')
 end
 
-Given /^global_session added as a gem$/ do
+Given /^the global_session gem is available$/ do
   add_global_session_gem
   install_global_session_gem
 end
@@ -25,39 +25,65 @@ Given /^I use (.+) environment$/ do |env|
   @rails_env = env
 end
 
-When /^I run \'.\/script\/generate\' with \'global_session_authority\'$/ do
-  app_shell_with_log("./script/generate global_session_authority #{@rails_env}")
-end
-
-Then /^I should receive message about about successful result$/ do
-  File.read(log_file).match("Don't forget to delete config/authorities/development.key").should_not be_nil
-end
-
-Then /^I should have the following files generated:$/ do |table|
-  table.raw.map do |file|
-    file = app_path(file)
-    File.exist?(file).should be_true
-  end
-end
-
 Given /^I use (.+) as a domain$/ do |domain|
   @domain = domain
-end
-
-When /^I run '\.\/script\/generate' with 'global_session'$/ do
-  app_shell_with_log("./script/generate global_session #{@domain}")
-end
-
-Then /^I should receive message about successful result$/ do
-  File.read(log_file).match("create  config/global_session.yml").should_not be_nil
 end
 
 Given /^global_session added as a middleware$/ do
   add_global_session_middleware
 end
 
+Given /^I have a local session with data:$/ do |data|
+  # Make sure that a local session exists in the DB
+  When "I send a GET request to 'happy/index'"
+
+  session = '{ ' + data.raw.map do |pair|
+    "'#{pair.first}' => '#{pair.last}'"
+  end.join(',') + ' }'
+
+  app_console("@session = ActiveRecord::SessionStore::Session.last")
+  app_console("@session.data = #{session}")
+  app_console("@session.save")
+end
+
+Given /^I have an expired global session$/ do
+  @global_session_origin = http_client.cookies.first.value
+  http_client.cookies.clear
+end
+
+When /^I run \'.\/script\/generate\' with \'global_session_authority\'$/ do
+  app_shell_with_log("./script/generate global_session_authority #{@rails_env}")
+end
+
+Then /^I should receive a message about about successful result$/ do
+  File.read(log_file).match("Don't forget to delete config/authorities/development.key").should_not be_nil
+end
+
+Then /^my app should have the following files::$/ do |table|
+  table.raw.map do |file|
+    file = app_path(file)
+    File.exist?(file).should be_true
+  end
+end
+
+When /^I run '\.\/script\/generate' with 'global_session'$/ do
+  app_shell_with_log("./script/generate global_session #{@domain}")
+end
+
+When /^I send a (.+) request to '(.+)'$/ do |method, path|
+  @response = make_request(method.downcase.to_sym, path)
+end
+
+When /^I send a (.+) request to '(.+)' with parameters:$/ do |method, path, data|
+  @response = make_request(method.downcase.to_sym, path, data.rows_hash)
+end
+
 When /^I launch my application$/ do
   run_application
+end
+
+Then /^I should receive a message about successful result$/ do
+  File.read(log_file).match("create  config/global_session.yml").should_not be_nil
 end
 
 Then /^I should have my application up and running$/ do
@@ -66,21 +92,13 @@ Then /^I should have my application up and running$/ do
   }.should_not raise_error(Errno::ECONNREFUSED)
 end
 
-When /^I send (.+) request '(.+)'$/ do |method, path|
-  @response = make_request(method.downcase.to_sym, path)
-end
-
-Then /^I should receive message "(.+)"$/ do |message|
+Then /^I should receive a message "(.+)"$/ do |message|
   JSON::parse(@response.body)["message"].should match(message)
 end
 
-Then /^I have (\d+) cookie variable called:$/ do |cookie_num, cookie_names|
+Then /^I have (\d+) cookies? named:$/ do |cookie_num, cookie_names|
   http_client.cookies.should have(cookie_num.to_i).items
   http_client.cookies.map(&:name).sort.should == cookie_names.raw.flatten.sort
-end
-
-When /^I send (.+) request '(.+)' with the following:$/ do |method, path, data|
-  @response = make_request(method.downcase.to_sym, path, data.rows_hash)
 end
 
 Then /^I should be redirected to '(.+)'$/ do |redirect_path|
@@ -91,21 +109,6 @@ end
 
 Then /^I should receive in session the following variables:$/ do |data|
   JSON::parse(@response.body)["session"].should == data.rows_hash
-end
-
-Given /^I have data stored in local session:$/ do |data|
-  session = '{ ' + data.raw.map do |pair|
-    "'#{pair.first}' => '#{pair.last}'"
-  end.join(',') + ' }'
-
-  app_console("@session = ActiveRecord::SessionStore::Session.last")
-  app_console("@session.data = #{session}")
-  app_console("@session.save")
-end
-
-Given /^I have global_session expired$/ do
-  @global_session_origin = http_client.cookies.first.value
-  http_client.cookies.clear
 end
 
 Then /^I should receive empty session$/ do

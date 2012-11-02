@@ -1,26 +1,26 @@
 Feature: Rails 2.3.8
   In order to ensure full compatibility with different Rails versions
-  Developers should be able to use global_session for Rails 2.3.8
+  Developers can use global_session with Rails 2.3.8
 
-  Scenario:
-    Given a Rails 2.3.8 application
-    And configuration fixtures are loaded
-    And database created
-    And global_session added as a gem
+  Background:
+    Given a Rails 2.3.5 application
+    And the app is configured to use global_session
+    And a database
+    And the global_session gem is available
 
   Scenario: configuring global_session authority
     Given I use development environment
     When I run './script/generate' with 'global_session_authority'
-    Then I should receive message about about successful result
-    And I should have the following files generated:
+    Then I should receive a message about about successful result
+    And my app should have the following files::
       | config | authorities | development.key |
       | config | authorities | development.pub |
 
   Scenario: configuring global_session config
     Given I use localhost as a domain
     When I run './script/generate' with 'global_session'
-    Then I should receive message about successful result
-    And I should have the following files generated:
+    Then I should receive a message about successful result
+    And my app should have the following files::
       | config | global_session.yml |
 
   Scenario: configuring global_session middleware
@@ -29,45 +29,45 @@ Feature: Rails 2.3.8
     Then I should have my application up and running
 
   Scenario: initializing global_session cookies
-    When I send GET request 'happy/index'
-    Then I should receive message "Be Happy!!!"
-    And I have 2 cookie variable called:
+    When I send a GET request to 'happy/index'
+    Then I should receive a message "Be Happy!!!"
+    And I have 2 cookies named:
       | global_session |
       | _local_session |
 
   Scenario: save data to the local session
-    When I send POST request 'happy/update' with the following:
+    When I send a POST request to 'happy/update' with parameters:
       | key   | my_data       |
       | value | hello cookies |
     Then I should be redirected to 'happy/index'
     And I should receive in session the following variables:
       | my_data | hello cookies |
-    And I have 2 cookie variable called:
+    And I have 2 cookies named:
       | global_session |
       | _local_session |
 
   Scenario: retrieve data from the local session
-    Given I have data stored in local session:
+    Given I have a local session with data:
       | woohoo | yabadabadoo |
-    When I send GET request 'happy/index'
+    When I send a GET request to 'happy/index'
     And I should receive in session the following variables:
       | woohoo | yabadabadoo |
 
   Scenario: delete data from the local sessoin
-    Given I have data stored in local session:
+    Given I have a local session with data:
       | woohoo  | yabadabadoo   |
       | my_data | hello cookies |
-    When I send DELETE request 'happy/destroy' with the following:
+    When I send a DELETE request to 'happy/destroy' with parameters:
       | key | woohoo |
     Then I should be redirected to 'happy/index'
     And I should receive in session the following variables:
       | my_data | hello cookies |
 
   Scenario: expired global_session
-    Given I have data stored in local session:
+    Given I have a local session with data:
       | woohoo | yabadabadoo |
-    And I have global_session expired
-    When I send GET request 'happy/index'
+    And I have an expired global session
+    When I send a GET request to 'happy/index'
     Then I should receive empty session
     And I should have new global_session generated
 

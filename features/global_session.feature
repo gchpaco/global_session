@@ -1,5 +1,5 @@
 Feature: GlobalSession
-  In order to test default behaviour for global_session
+  In order to test default behavior for global_session
   I want to duplicate some rspec scenarios here
 
   Background:
@@ -15,16 +15,16 @@ Feature: GlobalSession
       | test/authority              | 'authority1'        |
 
   Scenario: everything is copacetic
-    When I load it from cookie successful
+    Given a valid global session cookie
     Then everything is ok
 
-  Scenario: a trusted signature
-    When I load it from cookie successful
+  Scenario: reusing the cryptographic signature
+    Given a valid global session cookie
     And a trusted signature is passed in
     And I have a valid digest
     Then I should not recompute the signature
 
-  Scenario: an insecure attribute
-    When I load it from cookie successful
+  Scenario: changing insecure attributes
+    Given a valid global session cookie
     And an insecure attribute has changed
     Then everything is ok

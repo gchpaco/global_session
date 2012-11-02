@@ -14,14 +14,10 @@ Given /^I have the following mock_configs:$/ do |data|
   end
 end
 
-When /^I load it from cookie successful$/ do
+Given /^a valid global session cookie$/ do
   @directory        = GlobalSession::Directory.new(mock_config, @keystore.dir)
   @original_session = GlobalSession::Session.new(@directory)
   @cookie           = @original_session.to_s
-end
-
-Then /^everything is ok$/ do
-  GlobalSession::Session.new(@directory, @cookie).should be_a(GlobalSession::Session::Abstract)
 end
 
 When /^a trusted signature is passed in$/ do
@@ -32,10 +28,6 @@ When /^I have a valid digest$/ do
   @valid_digest = @original_session.signature_digest
 end
 
-Then /^I should not recompute the signature$/ do
-  GlobalSession::Session.new(@directory, @cookie, @valid_digest).should be_a(GlobalSession::Session::Abstract)
-end
-
 When /^an insecure attribute has changed$/ do
   zbin = GlobalSession::Encoding::Base64Cookie.load(@cookie)
   json = Zlib::Inflate.inflate(zbin)
@@ -44,4 +36,12 @@ When /^an insecure attribute has changed$/ do
   json = GlobalSession::Encoding::JSON.dump(hash)
   zbin = Zlib::Deflate.deflate(json, Zlib::BEST_COMPRESSION)
   @cookie = GlobalSession::Encoding::Base64Cookie.dump(zbin)
+end
+
+Then /^everything is ok$/ do
+  GlobalSession::Session.new(@directory, @cookie).should be_a(GlobalSession::Session::Abstract)
+end
+
+Then /^I should not recompute the signature$/ do
+  GlobalSession::Session.new(@directory, @cookie, @valid_digest).should be_a(GlobalSession::Session::Abstract)
 end
