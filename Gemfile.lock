@@ -9,7 +9,7 @@ GIT
 PATH
   remote: .
   specs:
-    global_session (2.0.0)
+    global_session (1.9.0)
       json (~> 1.4)
       rack-contrib (~> 1.0)
       right_support (~> 2.5)
