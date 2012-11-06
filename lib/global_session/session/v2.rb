@@ -42,7 +42,7 @@ module GlobalSession::Session
     # === Parameters
     # directory(Directory):: directory implementation that the session should use for various operations
     # cookie(String):: Optional, serialized global session cookie. If none is supplied, a new session is created.
-    # valid_signature_digest(String):: Optional, already-trusted signature. If supplied, the expensive RSA-verify operation will be skipped if the cookie's signature matches the value supplied.
+    # unused(Object):: Optional, already-trusted signature. This is ignored for v2.
     #
     # ===Raise
     # InvalidSession:: if the session contained in the cookie has been invalidated
@@ -239,6 +239,16 @@ module GlobalSession::Session
 
     private
 
+    # Transform a V1-style attribute hash to an Array with fixed placement for
+    # each element. The V2 scheme stores an array in the cookie instead of a hash
+    # to save space.
+    #
+    # === Parameters
+    # hash(Hash):: the attribute hash
+    #
+    # === Return
+    # attributes(Array)::
+    #
     def attribute_hash_to_array(hash)
       [
         hash['id'],
@@ -251,6 +261,16 @@ module GlobalSession::Session
       ]
     end
 
+    # Transform a V2-style attribute array to a Hash with the traditional attribute
+    # names. This is good for passing to SignedHash, or initializing a V1 session for
+    # downrev compatibility.
+    #
+    # === Parameters
+    # hash(Hash):: the attribute hash
+    #
+    # === Return
+    # attributes(Array):: fixed-position attributes array
+    #
     def attribute_array_to_hash(array)
       {
         'id' => array[0],
