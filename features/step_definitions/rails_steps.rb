@@ -42,8 +42,8 @@ Given /^I have a local session with data:$/ do |data|
   end.join(',') + ' }'
 
   app_console("@session = ActiveRecord::SessionStore::Session.last")
-  app_console("@session.data = #{session}")
-  app_console("@session.save")
+  app_console("(@session.data = #{session}) if @session")
+  app_console("@session.save if @session")
 end
 
 Given /^I have an expired global session$/ do

@@ -33,7 +33,6 @@ module GlobalSession
   #    * signed
   #    * insecure
   # * ephemeral
-  # * local_session_integration
   # * timeout
   # * renew
   # * authority
@@ -76,6 +75,10 @@ module GlobalSession
     # @return a representation of the object suitable for printing to the console
     def inspect
       "<#{self.class.name} @environment=#{@environment.inspect}>"
+    end
+
+    def to_hash
+      @config.dup
     end
 
     # Create a new Configuration object

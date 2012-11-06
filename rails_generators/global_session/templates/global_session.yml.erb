@@ -1,29 +1,21 @@
-# Common settings of the global session (that apply to all Rails environments)
-# are listed here. These may be overidden in the environment-specific section.
+# Common attributes.
+# May be overidden by per-environment settings; see below
 common:
   attributes:
-    # Signed attributes of the global session
-    signed:
+    signed: # integrity-protected attributes
     - user
-    # Untrusted attributes of the global session
-    insecure:
+    insecure: # Insecure (unsigned) attributes
     - account
-  #If the session cookie is ephemeral, it goes away when the user closes the browser.
-  #Otherwise it stays around
-  ephemeral: false
-  #If you want to store rails session id inside GlobalSession set local_session_integration as true.
-  local_session_integration: false
-  
+  ephemeral: true # Ephemeral cookies go away when the browser closes
+
 # Test/spec runs
 test:
   timeout: 15 #minutes
   renew: 5 #minutes before expiration
   cookie:
     name: global_session
-  #the name of the local authority (optional)
-  authority: test
-  #which authorities this app will trust
-  trust:
+  authority: test # the name of the local authority (optional)
+  trust: #which authorities this app will trust
   - test
 
 # Development mode

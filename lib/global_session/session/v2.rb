@@ -105,8 +105,9 @@ module GlobalSession::Session
         hash['a'] = authority
         signed_hash = RightSupport::Crypto::SignedHash.new(
             hash.reject { |k,v| ['dx', 's'].include?(k) },
-            :encoding=>GlobalSession::Encoding::Msgpack)
-        @signature = signed_hash.sign(hash['te'])
+            :encoding=>GlobalSession::Encoding::Msgpack,
+            :private_key=>@directory.private_key)
+        @signature = signed_hash.sign(@expired_at)
       end
 
       hash['dx'] = @insecure
@@ -201,7 +202,7 @@ module GlobalSession::Session
     # UnserializableType:: if the specified value can't be serialized as msgpack
     def []=(key, value)
       key = key.to_s #take care of symbol-style keys
-      raise InvalidSession unless valid?
+      raise GlobalSession::InvalidSession unless valid?
 
       if @schema_signed.include?(key)
         authority_check
@@ -259,15 +260,16 @@ module GlobalSession::Session
       insecure = hash.delete('dx')
       signature = hash.delete('s')
 
-      signed_hash = RightSupport::Crypto::SignedHash.new(
-          hash.reject { |k,v| ['dx', 's'].include?(k) },
-          :encoding=>GlobalSession::Encoding::Msgpack)
-      signed_hash.verify!(signature, expired_at)
-
       #Check trust in signing authority
       unless @directory.trusted_authority?(authority)
-        raise SecurityError, "Global sessions signed by #{authority} are not trusted"
+        raise SecurityError, "Global sessions signed by #{authority.inspect} are not trusted"
       end
+
+      signed_hash = RightSupport::Crypto::SignedHash.new(
+          hash.reject { |k,v| ['dx', 's'].include?(k) },
+          :encoding=>GlobalSession::Encoding::Msgpack,
+          :public_key=>@directory.authorities[authority])
+      signed_hash.verify!(signature, expired_at)
 
       #Check expiration
       unless expired_at > Time.now.utc

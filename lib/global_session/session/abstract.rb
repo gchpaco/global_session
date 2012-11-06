@@ -76,7 +76,7 @@ module GlobalSession::Session
 
     def authority_check # :nodoc:
       unless @directory.local_authority_name
-        raise NoAuthority, 'Cannot change secure session attributes; we are not an authority'
+        raise GlobalSession::NoAuthority, 'Cannot change secure session attributes; we are not an authority'
       end
     end
   end

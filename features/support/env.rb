@@ -209,17 +209,6 @@ class RightRailsTestWorld
                  app_path('config', 'environment.rb'))
   end
 
-  def add_local_session_integration
-    gbl_config_file = app_path('config', 'global_session.yml')
-
-    config = YAML.load_file(gbl_config_file)
-    config["common"]["local_session_integration"] = true
-
-    File.open(gbl_config_file, 'w') do |f|
-      YAML.dump(config, f)
-    end
-  end
-
   def prepare_to_create(rails_version)
     # clean from previous application
     stop_application

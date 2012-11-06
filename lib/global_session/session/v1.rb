@@ -203,7 +203,7 @@ module GlobalSession::Session
     # UnserializableType:: if the specified value can't be serialized as JSON
     def []=(key, value)
       key = key.to_s #take care of symbol-style keys
-      raise InvalidSession unless valid?
+      raise GlobalSession::InvalidSession unless valid?
 
       #Ensure that the value is serializable (will raise if not)
       canonicalize(value)
