@@ -95,7 +95,6 @@ module GlobalSession
     # === Parameters
     # directory(Directory):: directory implementation that the session should use for various operations
     # cookie(String):: Optional, serialized global session cookie. If none is supplied, a new session is created.
-    # valid_signature_digest(String):: Optional, already-trusted signature. If supplied, the expensive RSA-verify operation will be skipped if the cookie's signature matches the value supplied.
     #
     # === Return
     # session(Session):: the newly-initialized session

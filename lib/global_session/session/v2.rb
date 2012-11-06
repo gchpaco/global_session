@@ -51,14 +51,14 @@ module GlobalSession::Session
     # ExpiredSession:: if the session contained in the cookie has expired
     # MalformedCookie:: if the cookie was corrupt or malformed
     # SecurityError:: if signature is invalid or cookie is not signed by a trusted authority
-    def initialize(directory, cookie=nil, valid_signature_digest=nil)
+    def initialize(directory, cookie=nil, unused=nil)
       super(directory)
       @configuration = directory.configuration
       @schema_signed = Set.new((@configuration['attributes']['signed']))
       @schema_insecure = Set.new((@configuration['attributes']['insecure']))
 
       if cookie && !cookie.empty?
-        load_from_cookie(cookie, valid_signature_digest)
+        load_from_cookie(cookie)
       elsif @directory.local_authority_name
         create_from_scratch
       else
@@ -103,8 +103,10 @@ module GlobalSession::Session
         authority_check
         authority = @directory.local_authority_name
         hash['a'] = authority
-        digest = canonical_digest(hash)
-        @signature = GlobalSession::Encoding::Base64Cookie.dump(@directory.private_key.private_encrypt(digest))
+        signed_hash = RightSupport::Crypto::SignedHash.new(
+            hash.reject { |k,v| ['dx', 's'].include?(k) },
+            :encoding=>GlobalSession::Encoding::Msgpack)
+        @signature = signed_hash.sign(hash['te'])
       end
 
       hash['dx'] = @insecure
@@ -201,9 +203,6 @@ module GlobalSession::Session
       key = key.to_s #take care of symbol-style keys
       raise InvalidSession unless valid?
 
-      #Ensure that the value is serializable (will raise if not)
-      canonicalize(value)
-
       if @schema_signed.include?(key)
         authority_check
         @signed[key] = value
@@ -241,35 +240,7 @@ module GlobalSession::Session
 
     private
 
-    def canonical_digest(input) # :nodoc:
-      canonical = GlobalSession::Encoding::Msgpack.dump(canonicalize(input))
-      return digest(canonical)
-    end
-
-    def digest(input) # :nodoc:
-      return Digest::SHA1.new().update(input).hexdigest
-    end
-
-    def canonicalize(input) # :nodoc:
-      case input
-      when Hash
-        output = Array.new
-        ordered_keys = input.keys.sort
-        ordered_keys.each do |key|
-          output << [canonicalize(key), canonicalize(input[key])]
-        end
-      when Array
-        output = input.collect { |x| canonicalize(x) }
-      when Numeric, String, NilClass
-        output = input
-      else
-        raise UnserializableType, "Objects of type #{input.class.name} cannot be serialized in the global session"
-      end
-
-      return output
-    end
-
-    def load_from_cookie(cookie, valid_signature_digest) # :nodoc:
+    def load_from_cookie(cookie) # :nodoc:
       begin
         zbin = GlobalSession::Encoding::Base64Cookie.load(cookie)
         msgpack = Zlib::Inflate.inflate(zbin)
@@ -288,16 +259,10 @@ module GlobalSession::Session
       insecure = hash.delete('dx')
       signature = hash.delete('s')
 
-      unless valid_signature_digest == digest(signature)
-        #Check signature
-        expected = canonical_digest(hash)
-        signer = @directory.authorities[authority]
-        raise SecurityError, "Unknown signing authority #{authority}" unless signer
-        got = signer.public_decrypt(GlobalSession::Encoding::Base64Cookie.load(signature))
-        unless (got == expected)
-          raise SecurityError, "Signature mismatch on global session cookie; tampering suspected"
-        end
-      end
+      signed_hash = RightSupport::Crypto::SignedHash.new(
+          hash.reject { |k,v| ['dx', 's'].include?(k) },
+          :encoding=>GlobalSession::Encoding::Msgpack)
+      signed_hash.verify!(signature, expired_at)
 
       #Check trust in signing authority
       unless @directory.trusted_authority?(authority)

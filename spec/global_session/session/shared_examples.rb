@@ -39,14 +39,6 @@ shared_examples_for 'all subclasses of Session::Abstract' do
       end
     end
 
-    context 'when a trusted signature is passed in' do
-      it 'should not recompute the signature' do
-        flexmock(@directory.authorities['authority1']).should_receive(:public_decrypt).never
-        valid_digest = @original_session.signature_digest
-        described_class.new(@directory, @cookie, valid_digest).should be_a(GlobalSession::Session::Abstract)
-      end
-    end
-
     context 'when an insecure attribute has changed' do
       before do
         zbin = GlobalSession::Encoding::Base64Cookie.load(@cookie)
