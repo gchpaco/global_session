@@ -26,7 +26,7 @@ module GlobalSession
     # JSON serializer, used to serialize Hash objects in a form suitable
     # for stuffing into a cookie.
     #
-    class JSON
+    module JSON
       # Unserialize JSON to Hash.
       #
       # === Parameters
@@ -47,6 +47,18 @@ module GlobalSession
       # json(String):: A JSON-serialized representation of +value+
       def self.dump(object)
         return object.to_json
+      end
+    end
+
+    # Wrapper module for MessagePack that makes it conform to the standard load/dump interface
+    # for serializers.
+    module Msgpack
+      def self.load(binary)
+        MessagePack.unpack(binary)
+      end
+
+      def self.dump(object)
+        object.to_msgpack
       end
     end
 

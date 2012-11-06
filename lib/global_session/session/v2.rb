@@ -23,15 +23,11 @@
 require 'set'
 require 'zlib'
 
+# Dependencies on other gems
+require 'msgpack'
+
 module GlobalSession::Session
-  # Ladies and gentlemen: the one and only, star of the show, GLOBAL SESSION!
-  #
-  # Session is designed to act as much like a Hash as possible. You can use
-  # most of the methods you would use with Hash: [], has_key?, each, etc. It has a
-  # few additional methods that are specific to itself, mostly involving whether
-  # it's expired, valid, supports a certain key, etc.
-  #
-  class V1 < Abstract
+  class V2 < Abstract
     # Utility method to decode a cookie; good for console debugging. This performs no
     # validation or security check of any sort.
     #
@@ -39,8 +35,8 @@ module GlobalSession::Session
     # cookie(String):: well-formed global session cookie
     def self.decode_cookie(cookie)
       zbin = GlobalSession::Encoding::Base64Cookie.load(cookie)
-      json = Zlib::Inflate.inflate(zbin)
-      return GlobalSession::Encoding::JSON.load(json)
+      msgpack = Zlib::Inflate.inflate(zbin)
+      return GlobalSession::Encoding::Msgpack.load(msgpack)
     end
 
     # Create a new global session object.
@@ -89,7 +85,7 @@ module GlobalSession::Session
     # a fresh RSA signature.
     #
     # === Return
-    # cookie(String):: The B64cookie-encoded Zlib-compressed JSON-serialized global session hash
+    # cookie(String):: The B64cookie-encoded Zlib-compressed Msgpack-serialized global session hash
     def to_s
       if @cookie && !@dirty_insecure && !@dirty_secure
         #use cached cookie if nothing has changed
@@ -115,8 +111,8 @@ module GlobalSession::Session
       hash['s'] = @signature
       hash['a'] = authority
 
-      json = GlobalSession::Encoding::JSON.dump(hash)
-      zbin = Zlib::Deflate.deflate(json, Zlib::BEST_COMPRESSION)
+      msgpack = GlobalSession::Encoding::Msgpack.dump(hash)
+      zbin = Zlib::Deflate.deflate(msgpack, Zlib::BEST_COMPRESSION)
       return GlobalSession::Encoding::Base64Cookie.dump(zbin)
     end
 
@@ -200,7 +196,7 @@ module GlobalSession::Session
     # InvalidSession:: if the session has been invalidated (and therefore can't be written to)
     # ArgumentError:: if the configuration doesn't define the specified key as part of the global session
     # NoAuthority:: if the specified key is secure and the local node is not an authority
-    # UnserializableType:: if the specified value can't be serialized as JSON
+    # UnserializableType:: if the specified value can't be serialized as msgpack
     def []=(key, value)
       key = key.to_s #take care of symbol-style keys
       raise InvalidSession unless valid?
@@ -246,7 +242,7 @@ module GlobalSession::Session
     private
 
     def canonical_digest(input) # :nodoc:
-      canonical = GlobalSession::Encoding::JSON.dump(canonicalize(input))
+      canonical = GlobalSession::Encoding::Msgpack.dump(canonicalize(input))
       return digest(canonical)
     end
 
@@ -276,8 +272,8 @@ module GlobalSession::Session
     def load_from_cookie(cookie, valid_signature_digest) # :nodoc:
       begin
         zbin = GlobalSession::Encoding::Base64Cookie.load(cookie)
-        json = Zlib::Inflate.inflate(zbin)
-        hash = GlobalSession::Encoding::JSON.load(json)
+        msgpack = Zlib::Inflate.inflate(zbin)
+        hash = GlobalSession::Encoding::Msgpack.load(msgpack)
       rescue Exception => e
         mc = GlobalSession::MalformedCookie.new("Caused by #{e.class.name}: #{e.message}")
         mc.set_backtrace(e.backtrace)

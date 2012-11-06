@@ -21,6 +21,7 @@ spec = Gem::Specification.new do |s|
 
   s.add_runtime_dependency('simple_uuid', [">= 0.2.0"])
   s.add_runtime_dependency('json', ["~> 1.4"])
+  s.add_runtime_dependency('msgpack', ["~> 0.4"])
   s.add_runtime_dependency('rack-contrib', ["~> 1.0"])
 
   basedir = File.dirname(__FILE__)
