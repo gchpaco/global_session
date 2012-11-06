@@ -3,8 +3,8 @@ Feature: GlobalSession
   I want to duplicate some rspec scenarios here
 
   Background:
-    Given a KeyFactory is on
-    And I have the following keystores:
+    Given a keystore
+    And the following keys in my keystore:
       | authority1 | true   |
       | authority2 | false  |
     And I have the following mock_configs:

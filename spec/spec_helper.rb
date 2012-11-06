@@ -143,4 +143,48 @@ module SpecHelper
   def reset_mock_config
     @mock_config = nil
   end
+
+  def tamper_with_signed_attributes(klass, cookie, insecure_attributes)
+    zbin = GlobalSession::Encoding::Base64Cookie.load(cookie)
+
+    if klass == GlobalSession::Session::V2
+      bin = zbin
+      array = GlobalSession::Encoding::Msgpack.load(bin)
+      array[4] = insecure_attributes
+      bin = GlobalSession::Encoding::Msgpack.dump(array)
+      zbin = bin
+    elsif klass == GlobalSession::Session::V1
+      bin = Zlib::Inflate.inflate(zbin)
+      hash = GlobalSession::Encoding::JSON.load(bin)
+      hash['ds'] = insecure_attributes
+      bin = GlobalSession::Encoding::JSON.dump(hash)
+      zbin = Zlib::Deflate.deflate(bin, Zlib::BEST_COMPRESSION)
+    else
+      raise RuntimeError, "Don't know how to tamper with a #{described_class}"
+    end
+
+    GlobalSession::Encoding::Base64Cookie.dump(zbin)
+  end
+
+  def tamper_with_insecure_attributes(klass, cookie, insecure_attributes)
+    zbin = GlobalSession::Encoding::Base64Cookie.load(cookie)
+
+    if klass == GlobalSession::Session::V2
+      bin = zbin
+      array = GlobalSession::Encoding::Msgpack.load(bin)
+      array[5] = insecure_attributes
+      bin = GlobalSession::Encoding::Msgpack.dump(array)
+      zbin = bin
+    elsif klass == GlobalSession::Session::V1
+      bin = Zlib::Inflate.inflate(zbin)
+      hash = GlobalSession::Encoding::JSON.load(bin)
+      hash['dx'] = insecure_attributes
+      bin = GlobalSession::Encoding::JSON.dump(hash)
+      zbin = Zlib::Deflate.deflate(bin, Zlib::BEST_COMPRESSION)
+    else
+      raise RuntimeError, "Don't know how to tamper with a #{described_class}"
+    end
+
+    GlobalSession::Encoding::Base64Cookie.dump(zbin)
+  end
 end

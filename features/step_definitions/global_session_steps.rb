@@ -1,8 +1,8 @@
-Given /^a KeyFactory is on$/ do
+Given /^a keystore$/ do
   @keystore = KeyFactory.new
 end
 
-Given /^I have the following keystores:$/ do |data|
+Given /^the following keys in my keystore:$/ do |data|
   data.raw.each do |keystore|
     @keystore.create(keystore.first, eval(keystore.last))
   end
@@ -36,21 +36,7 @@ When /^I have a valid digest$/ do
 end
 
 When /^an insecure attribute has changed$/ do
-  zbin = GlobalSession::Encoding::Base64Cookie.load(@cookie)
-  data = Zlib::Inflate.inflate(zbin)
-  hash = nil
-  format = nil
-  begin
-    hash = GlobalSession::Encoding::Msgpack.load(data)
-    format = GlobalSession::Encoding::Msgpack
-  rescue Exception => e
-    hash = GlobalSession::Encoding::JSON.load(data)
-    format = GlobalSession::Encoding::JSON
-  end
-  hash['dx'] = {'favorite_color' => 'blue'}
-  data = format.dump(hash)
-  zbin = Zlib::Deflate.deflate(data, Zlib::BEST_COMPRESSION)
-  @cookie = GlobalSession::Encoding::Base64Cookie.dump(zbin)
+  @cookie = tamper_with_insecure_attributes(@original_session.class, @cookie, {'favorite_color' => 'blue'})
 end
 
 Then /^everything is ok$/ do

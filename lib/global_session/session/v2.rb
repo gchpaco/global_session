@@ -21,7 +21,6 @@
 
 # Standard library dependencies
 require 'set'
-require 'zlib'
 
 # Dependencies on other gems
 require 'msgpack'
@@ -34,8 +33,7 @@ module GlobalSession::Session
     # === Parameters
     # cookie(String):: well-formed global session cookie
     def self.decode_cookie(cookie)
-      zbin = GlobalSession::Encoding::Base64Cookie.load(cookie)
-      msgpack = Zlib::Inflate.inflate(zbin)
+      msgpack = GlobalSession::Encoding::Base64Cookie.load(cookie)
       return GlobalSession::Encoding::Msgpack.load(msgpack)
     end
 
@@ -114,9 +112,9 @@ module GlobalSession::Session
       hash['s'] = @signature
       hash['a'] = authority
 
-      msgpack = GlobalSession::Encoding::Msgpack.dump(hash)
-      zbin = Zlib::Deflate.deflate(msgpack, Zlib::BEST_COMPRESSION)
-      return GlobalSession::Encoding::Base64Cookie.dump(zbin)
+      array = attribute_hash_to_array(hash)
+      msgpack = GlobalSession::Encoding::Msgpack.dump(array)
+      return GlobalSession::Encoding::Base64Cookie.dump(msgpack)
     end
 
     # Determine whether the global session schema allows a given key to be placed
@@ -241,11 +239,35 @@ module GlobalSession::Session
 
     private
 
+    def attribute_hash_to_array(hash)
+      [
+        hash['id'],
+        hash['a'],
+        hash['tc'],
+        hash['te'],
+        hash['ds'],
+        hash['dx'],
+        hash['s']
+      ]
+    end
+
+    def attribute_array_to_hash(array)
+      {
+        'id' => array[0],
+        'a'  => array[1],
+        'tc' => array[2],
+        'te' => array[3],
+        'ds' => array[4],
+        'dx' => array[5],
+        's'  => array[6],
+      }
+    end
+
     def load_from_cookie(cookie) # :nodoc:
       begin
-        zbin = GlobalSession::Encoding::Base64Cookie.load(cookie)
-        msgpack = Zlib::Inflate.inflate(zbin)
-        hash = GlobalSession::Encoding::Msgpack.load(msgpack)
+        msgpack = GlobalSession::Encoding::Base64Cookie.load(cookie)
+        array = GlobalSession::Encoding::Msgpack.load(msgpack)
+        hash = attribute_array_to_hash(array)
       rescue Exception => e
         mc = GlobalSession::MalformedCookie.new("Caused by #{e.class.name}: #{e.message}")
         mc.set_backtrace(e.backtrace)

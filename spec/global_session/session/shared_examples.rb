@@ -39,30 +39,18 @@ shared_examples_for 'all subclasses of Session::Abstract' do
       end
     end
 
-    context 'when an insecure attribute has changed' do
+    context 'when an insecure attribute changes' do
       before do
-        zbin = GlobalSession::Encoding::Base64Cookie.load(@cookie)
-        json = Zlib::Inflate.inflate(zbin)
-        hash = GlobalSession::Encoding::JSON.load(json)
-        hash['dx'] = {'favorite_color' => 'blue'}
-        json = GlobalSession::Encoding::JSON.dump(hash)
-        zbin = Zlib::Deflate.deflate(json, Zlib::BEST_COMPRESSION)
-        @cookie = GlobalSession::Encoding::Base64Cookie.dump(zbin)
+        @cookie = tamper_with_insecure_attributes(described_class, @cookie, {'favorite_color' => 'blue'})
       end
       it 'should succeed' do
         described_class.new(@directory, @cookie).should be_a(GlobalSession::Session::Abstract)
       end
     end
 
-    context 'when a secure attribute has been tampered with' do
+    context 'when a secure attribute is tampered with' do
       before do
-        zbin = GlobalSession::Encoding::Base64Cookie.load(@cookie)
-        json = Zlib::Inflate.inflate(zbin)
-        hash = GlobalSession::Encoding::JSON.load(json)
-        hash['ds'] = {'evil_haxor' => 'mwahaha'}
-        json = GlobalSession::Encoding::JSON.dump(hash)
-        zbin = Zlib::Deflate.deflate(json, Zlib::BEST_COMPRESSION)
-        @cookie = GlobalSession::Encoding::Base64Cookie.dump(zbin)
+        @cookie = tamper_with_signed_attributes(described_class, @cookie, {'evil_haxor' => 'mwahaha'})
       end
       it 'should raise SecurityError' do
         lambda {
