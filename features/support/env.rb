@@ -37,11 +37,14 @@ class RightRailsTestWorld
   class ShellCommandFailed < Exception; end
   include SpecHelper
 
-  @@app_root = Dir.mktmpdir('global_session')
+  @app_root = nil
   @@database_name ||= "temp_global_session_#{Time.now.to_i}"
   @@http_client = nil
 
-  attr_accessor :server_pid
+  @@app_roots = Set.new
+  @@server_pids = Set.new
+
+  attr_accessor :server_pid, :rails_version
 
   def application_port
     11415
@@ -53,11 +56,12 @@ class RightRailsTestWorld
 
   # Return the app's RAILS_ROOT (shared across all scenarios/features in a given run!)
   def app_root
-    unless File.directory?(@@app_root)
-      FileUtils.mkdir_p(@@app_root)
+    unless @app_root
+      @app_root ||= Dir.mktmpdir("global_session_rails")
+      @@app_roots << @app_root
     end
 
-    @@app_root
+    @app_root
   end
 
   # Construct a path relative to the app's RAILS_ROOT
@@ -189,14 +193,10 @@ class RightRailsTestWorld
   end
 
   # Set of methods to work with fixtures
-  def load_fixtures(rails_version)
+  def load_fixtures
     rails_fixtures_path = File.join(BASEDIR, 'fixtures', "rails_#{rails_version}", '.')
     raise ArgumentError, "Fixtures for rails #{rails_version} does not exist." unless File.exist?(rails_fixtures_path)
     FileUtils.cp_r(rails_fixtures_path, app_root)
-  end
-
-  def install_global_session_gem
-    FileUtils.cp_r(BASEDIR, app_path('vendor', 'plugins', 'global_session'))
   end
 
   def add_global_session_gem
@@ -209,20 +209,21 @@ class RightRailsTestWorld
                  app_path('config', 'environment.rb'))
   end
 
-  def prepare_to_create(rails_version)
+  def create_rails_app
     # clean from previous application
     stop_application
     clean_cookies
-    FileUtils.rm_rf(@@app_root) if defined? @@app_root
 
-    # export gemfile
+    # export template gemfile with special global_session dependency
     template_path = File.join(BASEDIR, 'fixtures', "rails_#{rails_version}", 'Gemfile.tmpl')
     raise ArgumentError, "Gemfile for rails #{rails_version} does not exist." unless File.exist?(template_path)
     File.open(app_path('Gemfile'), 'w') do |f|
       f << File.read(template_path) + "gem 'global_session', :path => '#{BASEDIR}'\n"
     end
 
-    # reassign path to gemfile and run bundle install
+    app_shell("rails _#{rails_version}_ . -q")
+
+    # install all of the gems
     ENV['BUNDLE_GEMFILE'] = app_path('Gemfile')
     Bundler.with_clean_env do
       app_shell('bundle install')
@@ -241,10 +242,14 @@ class RightRailsTestWorld
       end
     end
     self.server_pid = File.read(app_path('tmp', 'pids', 'server.pid')).to_i
+    @@server_pids << server_pid
   end
 
   def stop_application
-    Process.kill("KILL", server_pid) unless server_pid.nil?
+    unless server_pid.nil?
+      Process.kill("KILL", server_pid)
+      self.server_pid = nil
+    end
   end
 
   def restart_application
@@ -268,8 +273,12 @@ class RightRailsTestWorld
   end
 
   at_exit do
-    Process.kill("KILL", @server_pid) if defined? @server_pid
-    FileUtils.rm_rf(@@app_root) if defined? @@app_root
+    @@server_pids.each do |pid|
+      Process.kill("KILL", pid) rescue nil
+    end
+    @@app_roots.each do |root|
+      FileUtils.rm_rf(root)
+    end
   end
 
 end

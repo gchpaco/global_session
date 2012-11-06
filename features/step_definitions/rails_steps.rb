@@ -1,12 +1,12 @@
 Given /^a Rails ([\d\.]+) application$/ do |rails_version|
-  @rails_version = rails_version
-  prepare_to_create(@rails_version)
-
-  app_shell("rails _#{@rails_version}_ . -q")
+  self.rails_version = rails_version
+  create_rails_app
+  load_fixtures
 end
 
 Given /^the app is configured to use global_session$/ do
-  load_fixtures(@rails_version)
+  When "I run './script/generate' with 'global_session'"
+  When "I run './script/generate' with 'global_session_authority'"
 end
 
 Given /^a database$/ do
@@ -18,7 +18,6 @@ end
 
 Given /^the global_session gem is available$/ do
   add_global_session_gem
-  install_global_session_gem
 end
 
 Given /^I use (.+) environment$/ do |env|

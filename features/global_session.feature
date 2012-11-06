@@ -19,7 +19,7 @@ Feature: GlobalSession
     Then everything is ok
 
   Scenario: reusing the cryptographic signature
-    Given a valid global session cookie
+    Given a valid V1 cookie
     And a trusted signature is passed in
     And I have a valid digest
     Then I should not recompute the signature

@@ -20,6 +20,13 @@ Given /^a valid global session cookie$/ do
   @cookie           = @original_session.to_s
 end
 
+Given /^a valid V([0-9]+) cookie$/ do |n|
+  @directory        = GlobalSession::Directory.new(mock_config, @keystore.dir)
+  klass = GlobalSession::Session.const_get("V#{Integer(n)}".to_sym)
+  @original_session = klass.new(@directory)
+  @cookie           = @original_session.to_s
+end
+
 When /^a trusted signature is passed in$/ do
   @directory.authorities['authority1'].should_receive(:public_decrypt).never
 end
@@ -30,11 +37,19 @@ end
 
 When /^an insecure attribute has changed$/ do
   zbin = GlobalSession::Encoding::Base64Cookie.load(@cookie)
-  json = Zlib::Inflate.inflate(zbin)
-  hash = GlobalSession::Encoding::JSON.load(json)
+  data = Zlib::Inflate.inflate(zbin)
+  hash = nil
+  format = nil
+  begin
+    hash = GlobalSession::Encoding::Msgpack.load(data)
+    format = GlobalSession::Encoding::Msgpack
+  rescue Exception => e
+    hash = GlobalSession::Encoding::JSON.load(data)
+    format = GlobalSession::Encoding::JSON
+  end
   hash['dx'] = {'favorite_color' => 'blue'}
-  json = GlobalSession::Encoding::JSON.dump(hash)
-  zbin = Zlib::Deflate.deflate(json, Zlib::BEST_COMPRESSION)
+  data = format.dump(hash)
+  zbin = Zlib::Deflate.deflate(data, Zlib::BEST_COMPRESSION)
   @cookie = GlobalSession::Encoding::Base64Cookie.dump(zbin)
 end
 
