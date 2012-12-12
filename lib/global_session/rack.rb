@@ -69,7 +69,7 @@ module GlobalSession
           namespace = namespace.const_get(parts.shift.to_sym) until parts.empty?
           directory_klass = namespace
         rescue Exception => e
-          raise ConfigurationError, "Invalid/unknown directory class name #{@configuration['directory']}"
+          raise GlobalSession::ConfigurationError, "Invalid/unknown directory class name #{@configuration['directory']}"
         end
 
         if directory.instance_of?(String)

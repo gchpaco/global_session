@@ -7,8 +7,8 @@ spec = Gem::Specification.new do |s|
   s.required_ruby_version = Gem::Requirement.new(">= 1.8.7")
 
   s.name    = 'global_session'
-  s.version = '1.1.0'
-  s.date    = '2012-11-01'
+  s.version = '2.0.0'
+  s.date    = '2012-11-06'
 
   s.authors = ['Tony Spataro']
   s.email   = 'support@rightscale.com'
@@ -21,6 +21,7 @@ spec = Gem::Specification.new do |s|
 
   s.add_runtime_dependency('simple_uuid', [">= 0.2.0"])
   s.add_runtime_dependency('json', ["~> 1.4"])
+  s.add_runtime_dependency('msgpack', ["~> 0.4"])
   s.add_runtime_dependency('rack-contrib', ["~> 1.0"])
 
   basedir = File.dirname(__FILE__)

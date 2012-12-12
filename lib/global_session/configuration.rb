@@ -32,7 +32,6 @@ module GlobalSession
   # * attributes
   #    * signed
   #    * insecure
-  # * integrated
   # * ephemeral
   # * timeout
   # * renew
@@ -78,6 +77,10 @@ module GlobalSession
       "<#{self.class.name} @environment=#{@environment.inspect}>"
     end
 
+    def to_hash
+      @config.dup
+    end
+
     # Create a new Configuration object
     #
     # === Parameters
@@ -118,7 +121,7 @@ module GlobalSession
     end
 
     def validate # :nodoc
-      ['attributes/signed', 'integrated', 'cookie/name',
+      ['attributes/signed', 'cookie/name',
        'timeout'].each {|k| validate_presence_of k}
     end
 
