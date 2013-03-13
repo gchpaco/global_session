@@ -9,6 +9,8 @@ In other words: it glues your semi-related Web apps together so they share the
 same bits of session state. This is done by putting the session itself into
 cookies.
 
+Maintained by the RightScale Teal Team
+
 == What Is It Not?
 
 This plugin does not provide a complete solution for identity management. In
