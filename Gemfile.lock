@@ -1,11 +1,3 @@
-GIT
-  remote: git://github.com/xeger/actionpack.git
-  revision: 998ff965a98cc3f2d5125e33b1e34d3621f7dda7
-  specs:
-    actionpack (2.3.5)
-      activesupport (= 2.3.5)
-      rack
-
 PATH
   remote: .
   specs:
@@ -21,6 +13,9 @@ GEM
   specs:
     actionmailer (2.3.5)
       actionpack (= 2.3.5)
+    actionpack (2.3.5)
+      activesupport (= 2.3.5)
+      rack (~> 1.0.0)
     activerecord (2.3.5)
       activesupport (= 2.3.5)
     activeresource (2.3.5)
@@ -34,6 +29,12 @@ GEM
       gherkin (~> 2.4.0)
       json (>= 1.4.6)
       term-ansicolor (>= 1.0.5)
+    debugger (1.5.0)
+      columnize (>= 0.3.1)
+      debugger-linecache (~> 1.2.0)
+      debugger-ruby_core_source (~> 1.2.0)
+    debugger-linecache (1.2.0)
+    debugger-ruby_core_source (1.2.0)
     diff-lcs (1.1.3)
     flexmock (0.8.11)
     gherkin (2.4.21)
@@ -43,7 +44,7 @@ GEM
     linecache (0.43)
     msgpack (0.5.1)
     mysql (2.8.1)
-    rack (1.1.3)
+    rack (1.0.1)
     rack-contrib (1.1.0)
       rack (>= 0.9.1)
     rails (2.3.5)
@@ -53,8 +54,8 @@ GEM
       activeresource (= 2.3.5)
       activesupport (= 2.3.5)
       rake (>= 0.8.3)
-    rake (0.8.7)
-    right_support (2.6.12)
+    rake (0.9.6)
+    right_support (2.6.16)
     rspec (1.3.1)
     ruby-debug (0.10.4)
       columnize (>= 0.1)
@@ -70,13 +71,13 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  actionpack (= 2.3.5)!
   cucumber (~> 0.8)
+  debugger
   flexmock (~> 0.8)
   global_session!
   httpclient
   mysql
-  rack (~> 1.1.0)
+  rack (~> 1.0)
   rails (= 2.3.5)
   rake (~> 0.8)
   rspec (~> 1.3)
