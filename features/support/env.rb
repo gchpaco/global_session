@@ -134,18 +134,23 @@ class RightRailsTestWorld
     thing_to_return = options[:return] || :output
     app_console     = nil
 
-    if options[:detach]
-      Dir.chdir(app_root) do
-        app_console = IO.popen('script/console', 'r+')
-      end
-    else
-      @app_console_mutex.synchronize do
-        unless @app_console
-          Dir.chdir(app_root) do
-            @app_console = IO.popen('script/console', 'r+')
-          end
+    Bundler.with_clean_env do
+      #Work around ActiveSupport 2.3.x bug where they use Mutex without requiring thread
+      ENV['RUBYOPT'] = '-rthread'
+
+      if options[:detach]
+        Dir.chdir(app_root) do
+          app_console = IO.popen('bundle exec script/console', 'r+')
         end
-        app_console = @app_console
+      else
+        @app_console_mutex.synchronize do
+          unless @app_console
+            Dir.chdir(app_root) do
+              @app_console = IO.popen('bundle exec script/console', 'r+')
+            end
+          end
+          app_console = @app_console
+        end
       end
     end
 
@@ -240,12 +245,12 @@ class RightRailsTestWorld
     app_shell('bundle install', :bundle_exec => false)
 
     # create Rails app
-    app_shell("rails _#{rails_version}_ . -q")
+    app_shell("rails . -q")
   end
 
   # Run rails application
   def run_application
-    app_shell("./script/server -p #{application_port} -d")
+    app_shell("script/server -p #{application_port} -d")
     loop do
       begin
         TCPSocket.new('localhost', application_port).close
@@ -254,6 +259,7 @@ class RightRailsTestWorld
         Thread.pass
       end
     end
+
     self.server_pid = File.read(app_path('tmp', 'pids', 'server.pid')).to_i
     @@server_pids << server_pid
   end
