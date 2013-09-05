@@ -21,48 +21,107 @@
 
 # Standard library dependencies
 require 'set'
-require 'zlib'
 
 module GlobalSession::Session
-  # V1 uses JSON serialization and Zlib compression. Its JSON structure is a Hash
-  # with the following format:
-  #  {'id': <uuid_string> ,
-  #   'a': <signing_authority_string>,
-  #   'tc': <creation_timestamp_integer>,
-  #   'te': <expiration_timestamp_integer>,
-  #   'ds': {<signed_data_hash>},
-  #   'dx': {<unsigned_data_hash>},
-  #   's': <binary_signature_string>}
+  # Global session V3 uses JSON serialization, no compression, and a detached signature that is
+  # excluded from the JSON structure for efficiency reasons.
   #
-  # Limitations of V1 include the following:
-  # * Compressing the JSON usually INCREASES the size of the compressed data
-  # * The sign and verify algorithms, while safe, do not comply fully with PKCS7; they rely on the
-  #   OpenSSL low-level crypto API instead of using the higher-level EVP (envelope) API.
-  class V1 < Abstract
+  # The binary structure of a V3 session looks like this:
+  #  <utf8_json><0x00><binary_signature>
+  #
+  # Its JSON structure is an Array with the following format:
+  #  [<version_integer>,
+  #   <uuid_string>,
+  #   <signing_authority_string>,
+  #   <creation_timestamp_integer>,
+  #   <expiration_timestamp_integer>,
+  #   {<signed_data_hash>},
+  #   {<unsigned_data_hash>}]
+  #
+  # The design goal of V3 is to ensure broad compatibility across various programming languages
+  # and cryptographic libraries, and to create a serialization format that can be reused for
+  # future versions. To this end, it sacrifices space efficiency by switching back to JSON
+  # encoding (instead of msgpack), and uses the undocumented OpenSSL::PKey#sign and #verify
+  # operations which rely on the PKCS7-compliant OpenSSL EVP API.
+  class V3 < Abstract
+    STRING_ENCODING = !!(RUBY_VERSION !~ /1.8/)
+
     # Utility method to decode a cookie; good for console debugging. This performs no
     # validation or security check of any sort.
     #
     # === Parameters
     # cookie(String):: well-formed global session cookie
     def self.decode_cookie(cookie)
-      zbin = GlobalSession::Encoding::Base64Cookie.load(cookie)
-      json = Zlib::Inflate.inflate(zbin)
-      return GlobalSession::Encoding::JSON.load(json)
+      bin = GlobalSession::Encoding::Base64Cookie.load(cookie)
+      json, sig = split_body(bin)
+      return GlobalSession::Encoding::JSON.load(json), sig
     end
+
+    # Split an ASCII-8bit input string into two constituent parts: a UTF-8 JSON document
+    # and an ASCII-8bit binary string. A null (0x00) separator character is presumed to
+    # separate the two parts of the input string.
+    #
+    # This is an implementation helper for GlobalSession serialization and not useful for
+    # the public at large. It's left public as an aid for those who want to hack sessions.
+    #
+    # @param [String] input a binary string (encoding will be forced to ASCII_8BIT!)
+    # @return [Array] returns a 2-element Array of String: json document, plus binary signature
+    # @raise [ArgumentError] if the null separator is missing
+    def self.split_body(input)
+      input.force_encoding(Encoding::ASCII_8BIT) if STRING_ENCODING
+      null_at = input.index("\x00")
+
+      if null_at
+        json = input[0...null_at]
+        sig = input[null_at+1..-1]
+        if STRING_ENCODING
+          json.force_encoding(Encoding::UTF_8)
+          sig.force_encoding(Encoding::ASCII_8BIT)
+        end
+
+        return json, sig
+      else
+        raise ArgumentError, "Malformed input string does not contain 0x00 byte"
+      end
+    end
+
+    # Join a UTF-8 JSON document and an ASCII-8bit binary string.
+    #
+    # This is an implementation helper for GlobalSession serialization and not useful for
+    # the public at large. It's left public as an aid for those who want to hack sessions.
+    #
+    # @param [String] json a UTF-8 JSON document (encoding will be forced to UTF_8!)
+    # @param [String] signature a binary signautre (encoding will be forced to ASCII_8BIT!)
+    # @return [String] a binary concatenation of the two inputs, separated by 0x00
+    def self.join_body(json, signature)
+      result = ""
+      if STRING_ENCODING
+        result.force_encoding(Encoding::ASCII_8BIT)
+        json.force_encoding(Encoding::ASCII_8BIT)
+        signature.force_encoding(Encoding::ASCII_8BIT)
+      end
+
+      result << json
+      result << "\x00"
+      result << signature
+      result
+    end
+
 
     # Serialize the session to a form suitable for use with HTTP cookies. If any
     # secure attributes have changed since the session was instantiated, compute
     # a fresh RSA signature.
     #
     # === Return
-    # cookie(String):: Base64Cookie-encoded, Zlib-compressed JSON-serialized global session
+    # cookie(String):: The B64cookie-encoded JSON-serialized global session
     def to_s
       if @cookie && !@dirty_insecure && !@dirty_secure
         #use cached cookie if nothing has changed
         return @cookie
       end
 
-      hash = {'id' => @id,
+      hash = {'v' => 3,
+              'id' => @id, 'a' => @authority,
               'tc' => @created_at.to_i, 'te' => @expired_at.to_i,
               'ds' => @signed}
 
@@ -73,17 +132,21 @@ module GlobalSession::Session
         authority_check
         authority = @directory.local_authority_name
         hash['a'] = authority
-        digest = canonical_digest(hash)
-        @signature = GlobalSession::Encoding::Base64Cookie.dump(@directory.private_key.private_encrypt(digest))
+        signed_hash = RightSupport::Crypto::SignedHash.new(
+          hash,
+          :envelope=>true,
+          :encoding=>GlobalSession::Encoding::JSON,
+          :private_key=>@directory.private_key)
+        @signature = signed_hash.sign(@expired_at)
       end
 
       hash['dx'] = @insecure
-      hash['s'] = @signature
       hash['a'] = authority
 
-      json = GlobalSession::Encoding::JSON.dump(hash)
-      zbin = Zlib::Deflate.deflate(json, Zlib::BEST_COMPRESSION)
-      return GlobalSession::Encoding::Base64Cookie.dump(zbin)
+      array = attribute_hash_to_array(hash)
+      json = GlobalSession::Encoding::JSON.dump(array)
+      bin = self.class.join_body(json, @signature)
+      return GlobalSession::Encoding::Base64Cookie.dump(bin)
     end
 
     # Return the keys that are currently present in the global session.
@@ -146,9 +209,6 @@ module GlobalSession::Session
       key = key.to_s #take care of symbol-style keys
       raise GlobalSession::InvalidSession unless valid?
 
-      #Ensure that the value is serializable (will raise if not)
-      canonicalize(value)
-
       if @schema_signed.include?(key)
         authority_check
         @signed[key] = value
@@ -186,65 +246,36 @@ module GlobalSession::Session
 
     private
 
-    def canonical_digest(input) # :nodoc:
-      canonical = GlobalSession::Encoding::JSON.dump(canonicalize(input))
-      return digest(canonical)
-    end
-
-    def digest(input) # :nodoc:
-      return Digest::SHA1.new().update(input).hexdigest
-    end
-
-    def canonicalize(input) # :nodoc:
-      case input
-      when Hash
-        output = Array.new
-        ordered_keys = input.keys.sort
-        ordered_keys.each do |key|
-          output << [canonicalize(key), canonicalize(input[key])]
-        end
-      when Array
-        output = input.collect { |x| canonicalize(x) }
-      when Numeric, String, NilClass
-        output = input
-      else
-        raise UnserializableType, "Objects of type #{input.class.name} cannot be serialized in the global session"
-      end
-
-      return output
-    end
-
     def load_from_cookie(cookie) # :nodoc:
+      hash = nil
+
       begin
-        zbin = GlobalSession::Encoding::Base64Cookie.load(cookie)
-        json = Zlib::Inflate.inflate(zbin)
-        hash = GlobalSession::Encoding::JSON.load(json)
+        array, signature = self.class.decode_cookie(cookie)
+        hash = attribute_array_to_hash(array)
       rescue Exception => e
         mc = GlobalSession::MalformedCookie.new("Caused by #{e.class.name}: #{e.message}")
         mc.set_backtrace(e.backtrace)
         raise mc
       end
 
+      _ = hash['v']
       id = hash['id']
       authority = hash['a']
       created_at = Time.at(hash['tc'].to_i).utc
       expired_at = Time.at(hash['te'].to_i).utc
       signed = hash['ds']
       insecure = hash.delete('dx')
-      signature = hash.delete('s')
-
-      #Check signature
-      expected = canonical_digest(hash)
-      signer = @directory.authorities[authority]
-      raise SecurityError, "Unknown signing authority #{authority}" unless signer
-      got = signer.public_decrypt(GlobalSession::Encoding::Base64Cookie.load(signature))
-      unless (got == expected)
-        raise SecurityError, "Signature mismatch on global session cookie; tampering suspected"
-      end
 
       #Check trust in signing authority
-      unless @directory.trusted_authority?(authority)
-        raise SecurityError, "Global sessions signed by #{authority} are not trusted"
+      if @directory.trusted_authority?(authority)
+        signed_hash = RightSupport::Crypto::SignedHash.new(
+          hash,
+          :envelope=>true,
+          :encoding=>GlobalSession::Encoding::JSON,
+          :public_key=>@directory.authorities[authority])
+        signed_hash.verify!(signature, expired_at)
+      else
+        raise SecurityError, "Global sessions signed by #{authority.inspect} are not trusted"
       end
 
       #Check expiration
@@ -286,6 +317,49 @@ module GlobalSession::Session
       @signed = {}
       @insecure = {}
       @authority = nil
+    end
+
+    # Transform a V1-style attribute hash to an Array with fixed placement for
+    # each element. The V3 scheme is serialized as an array to save space.
+    #
+    # === Parameters
+    # hash(Hash):: the attribute hash
+    #
+    # === Return
+    # attributes(Array)::
+    #
+    def attribute_hash_to_array(hash)
+      [
+        hash['v'],
+        hash['id'],
+        hash['a'],
+        hash['tc'],
+        hash['te'],
+        hash['ds'],
+        hash['dx'],
+      ]
+    end
+
+    # Transform a V2-style attribute array to a Hash with the traditional attribute
+    # names. This is good for passing to SignedHash, or initializing a V1 session for
+    # downrev compatibility.
+    #
+    # === Parameters
+    # hash(Hash):: the attribute hash
+    #
+    # === Return
+    # attributes(Array):: fixed-position attributes array
+    #
+    def attribute_array_to_hash(array)
+      {
+        'v'  => array[0],
+        'id' => array[1],
+        'a'  => array[2],
+        'tc' => array[3],
+        'te' => array[4],
+        'ds' => array[5],
+        'dx' => array[6],
+      }
     end
   end
 end

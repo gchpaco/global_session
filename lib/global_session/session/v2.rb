@@ -26,6 +26,23 @@ require 'set'
 require 'msgpack'
 
 module GlobalSession::Session
+  # Global session V2 uses msgpack serialization and no compression. Its msgpack structure is an
+  # Array with the following format:
+  #  [<uuid_string>,
+  #   <signing_authority_string>,
+  #   <creation_timestamp_integer>,
+  #   <expiration_timestamp_integer>,
+  #   {<signed_data_hash>},
+  #   {<unsigned_data_hash>},
+  #   <binary_signature_string>]
+  #
+  # The design goal of V2 is to minimize the size of the base64-encoded session state in order
+  # to make GlobalSession more amenable to use as a browser cookie.
+  #
+  # Limitations of V2 include the following:
+  # * Some Ruby implementations (e.g. JRuby) lack a msgpack library
+  # * The sign and verify algorithms, while safe, do not comply fully with PKCS7; they rely on the
+  #   OpenSSL low-level crypto API instead of using the higher-level EVP (envelope) API.
   class V2 < Abstract
     # Utility method to decode a cookie; good for console debugging. This performs no
     # validation or security check of any sort.
@@ -37,53 +54,12 @@ module GlobalSession::Session
       return GlobalSession::Encoding::Msgpack.load(msgpack)
     end
 
-    # Create a new global session object.
-    #
-    # === Parameters
-    # directory(Directory):: directory implementation that the session should use for various operations
-    # cookie(String):: Optional, serialized global session cookie. If none is supplied, a new session is created.
-    # unused(Object):: Optional, already-trusted signature. This is ignored for v2.
-    #
-    # ===Raise
-    # InvalidSession:: if the session contained in the cookie has been invalidated
-    # ExpiredSession:: if the session contained in the cookie has expired
-    # MalformedCookie:: if the cookie was corrupt or malformed
-    # SecurityError:: if signature is invalid or cookie is not signed by a trusted authority
-    def initialize(directory, cookie=nil)
-      super(directory)
-      @configuration = directory.configuration
-      @schema_signed = Set.new((@configuration['attributes']['signed']))
-      @schema_insecure = Set.new((@configuration['attributes']['insecure']))
-
-      if cookie && !cookie.empty?
-        load_from_cookie(cookie)
-      elsif @directory.local_authority_name
-        create_from_scratch
-      else
-        create_invalid
-      end
-    end
-
-    # @return [true,false] true if this session was created in-process, false if it was initialized from a cookie
-    def new_record?
-      @cookie.nil?
-    end
-
-    # Determine whether the session is valid. This method simply delegates to the
-    # directory associated with this session.
-    #
-    # === Return
-    # valid(true|false):: True if the session is valid, false otherwise
-    def valid?
-      @directory.valid_session?(@id, @expired_at)
-    end
-
     # Serialize the session to a form suitable for use with HTTP cookies. If any
     # secure attributes have changed since the session was instantiated, compute
     # a fresh RSA signature.
     #
     # === Return
-    # cookie(String):: The B64cookie-encoded Zlib-compressed Msgpack-serialized global session hash
+    # cookie(String):: Base64Cookie-encoded, Msgpack-serialized global session
     def to_s
       if @cookie && !@dirty_insecure && !@dirty_secure
         #use cached cookie if nothing has changed
@@ -116,31 +92,6 @@ module GlobalSession::Session
       msgpack = GlobalSession::Encoding::Msgpack.dump(array)
       return GlobalSession::Encoding::Base64Cookie.dump(msgpack)
     end
-
-    # Determine whether the global session schema allows a given key to be placed
-    # in the global session.
-    #
-    # === Parameters
-    # key(String):: The name of the key
-    #
-    # === Return
-    # supported(true|false):: Whether the specified key is supported
-    def supports_key?(key)
-      @schema_signed.include?(key) || @schema_insecure.include?(key)
-    end
-
-    # Determine whether this session contains a value with the specified key.
-    #
-    # === Parameters
-    # key(String):: The name of the key
-    #
-    # === Return
-    # contained(true|false):: Whether the session currently has a value for the specified key.
-    def has_key?(key)
-      @signed.has_key?(key) || @insecure.has_key?(key)
-    end
-
-    alias :key? :has_key?
 
     # Return the keys that are currently present in the global session.
     #
