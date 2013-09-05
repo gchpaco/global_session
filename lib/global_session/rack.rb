@@ -157,7 +157,16 @@ module GlobalSession
         return unless @directory.local_authority_name
         return if env['global_session.req.update'] == false
 
-        domain = @configuration['cookie']['domain'] || env['SERVER_NAME']
+        if @configuration['cookie'].key?('domain')
+          # Use the explicitly provided domain name
+          domain = @configuration['cookie']['domain']
+        else
+          # Use the server name, but strip off the most specific component
+          parts = env['SERVER_NAME'].split('.')
+          parts = parts[1..-1] if parts.length > 2
+          domain = parts.join('.')
+        end
+
         session = env['global_session']
 
         if session
