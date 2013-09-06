@@ -114,10 +114,14 @@ module GlobalSession
       if cookie.nil?
         # Create a legitimately new session
         case forced_version
+        when 3, nil
+          Session::V3.new(self, cookie)
+        when 2
+          Session::V2.new(self, cookie)
         when 1
           Session::V1.new(self, cookie)
         else
-          Session.new(self, cookie)
+          raise ArgumentError, "Unknown value #{forced_version} for configuration.cookie.version" 
         end
       else
         warn "GlobalSession::Directory#create_session with an existing session is DEPRECATED -- use #load_session instead"

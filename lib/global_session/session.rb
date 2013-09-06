@@ -45,7 +45,7 @@ module GlobalSession::Session
     when /^eNo/
       V1
     else
-      V2 # until we fix the specs...
+      V3
     end
   end
 end
