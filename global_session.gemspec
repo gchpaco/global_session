@@ -22,6 +22,7 @@ Gem::Specification.new do |s|
     "README.rdoc",
     "Rakefile",
     "VERSION",
+    "global_session.gemspec",
     "init.rb",
     "lib/global_session.rb",
     "lib/global_session/configuration.rb",

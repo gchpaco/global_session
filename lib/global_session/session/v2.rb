@@ -22,9 +22,6 @@
 # Standard library dependencies
 require 'set'
 
-# Dependencies on other gems
-require 'msgpack'
-
 module GlobalSession::Session
   # Global session V2 uses msgpack serialization and no compression. Its msgpack structure is an
   # Array with the following format:
