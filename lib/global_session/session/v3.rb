@@ -273,7 +273,15 @@ module GlobalSession::Session
           :envelope=>true,
           :encoding=>GlobalSession::Encoding::JSON,
           :public_key=>@directory.authorities[authority])
-        signed_hash.verify!(signature, expired_at)
+
+        begin
+          signed_hash.verify!(signature, expired_at)
+        rescue RightSupport::Crypto::ExpiredSignature
+          raise GlobalSession::ExpiredSession, "Session expired at #{expired_at}"
+        rescue RightSupport::Crypto::InvalidSignature => e
+          raise SecurityError, "Global session signature verification failed: " + e.message
+        end
+
       else
         raise SecurityError, "Global sessions signed by #{authority.inspect} are not trusted"
       end

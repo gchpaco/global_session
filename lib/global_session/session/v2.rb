@@ -265,12 +265,10 @@ module GlobalSession::Session
 
       begin
         signed_hash.verify!(signature, expired_at)
-      rescue SecurityError => e
-        if e.message =~ /expired/
-          raise GlobalSession::ExpiredSession, "Session expired at #{expired_at}"
-        else
-          raise SecurityError, "Global session verification failure; suspected tampering: " + e.message
-        end
+      rescue RightSupport::Crypto::ExpiredSignature
+        raise GlobalSession::ExpiredSession, "Session expired at #{expired_at}"
+      rescue RightSupport::Crypto::InvalidSignature => e
+        raise SecurityError, "Global session signature verification failed: " + e.message
       end
 
       #Check other validity (delegate to directory)
