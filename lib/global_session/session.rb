@@ -38,9 +38,9 @@ module GlobalSession::Session
 
   def self.guess_version(cookie)
     case cookie
-    when /^WzMsI/
+    when /^WzM/
       V3
-    when /^l9oAJG/
+    when /^l9o/
       V2
     when /^eNo/
       V1

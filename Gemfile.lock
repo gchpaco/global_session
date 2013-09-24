@@ -1,9 +1,9 @@
 GIT
   remote: git://github.com/rightscale/right_support.git
-  revision: 3681ca407803402c5f8fcf94a2ab2ee6c4428eab
+  revision: 5df49d91bf0c68022f6d119abe9239417f8b29b5
   branch: teal_13_11_acu118023_global_session_v3
   specs:
-    right_support (2.8.1)
+    right_support (2.8.2)
 
 GEM
   remote: https://rubygems.org/
