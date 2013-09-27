@@ -1,3 +1,19 @@
+== 2.0
+
+The format of the global session cookie has been reinvented; it now uses msgpack and delegates
+all crypto to RightSupport::Crypto::SignedHash. Together with a few other optimizations, the
+size of the cookie has shrunk by about 30%.
+
+The gem remains capable of reading and writing V1 format cookies, but all new cookies are created
+with the V2 format.
+
+The "integrated" feature is no longer supported for the Rails integration layer; global session
+attributes must always be accessed separately from local session attributes, through the
+#global_session reader method that is mixed into ActionController::Base.
+
+== 1.0
+
+Mostly interface-compatible with 0.9.
 
 == 0.9
 

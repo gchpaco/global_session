@@ -1,3 +1,24 @@
+# Copyright (c) 2012 RightScale Inc
+#
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+# LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 module GlobalSession
   # Central point of access for GlobalSession configuration information. This is
   # mostly a very thin wrapper around the serialized hash written to the YAML config
@@ -11,7 +32,6 @@ module GlobalSession
   # * attributes
   #    * signed
   #    * insecure
-  # * integrated
   # * ephemeral
   # * timeout
   # * renew
@@ -19,6 +39,7 @@ module GlobalSession
   # * trust
   # * directory
   # * cookie
+  #     * version
   #     * name
   #     * domain
   #
@@ -52,21 +73,38 @@ module GlobalSession
   # you are integrating; see GlobalSession::Rails for more information.
   #
   class Configuration
-    # Create a new Configuration objectt
+    # @return a representation of the object suitable for printing to the console
+    def inspect
+      "<#{self.class.name} @environment=#{@environment.inspect}>"
+    end
+
+    def to_hash
+      @config.dup
+    end
+
+    # Create a new Configuration object
     #
     # === Parameters
-    # config_File(String):: Absolute filesystem path to the configuration file
+    # config(String|Hash):: Absolute filesystem path to the configuration file, or Hash containing configuration
     # environment(String):: Config file section from which to read settings
     #
     # === Raise
     # MissingConfiguration:: if config file is missing or unreadable
     # TypeError:: if config file does not contain a YAML-serialized Hash
-    def initialize(config_file, environment)
-      @config_file = config_file
+    def initialize(config, environment)
+      if config.is_a?(Hash)
+        @config = config
+      elsif File.readable?(config)
+        data = YAML.load(File.read(config))
+        unless data.is_a?(Hash)
+          raise TypeError, "Configuration file #{File.basename(config)} must contain a hash as its top-level element"
+        end
+        @config = data
+      else
+        raise MissingConfiguration, "Missing or unreadable configuration file #{config}"
+      end
+
       @environment = environment
-      raise MissingConfiguration, "Missing or unreadable configuration file" unless File.readable?(@config_file)
-      @config      = YAML.load(File.read(@config_file))
-      raise TypeError, "#{config_file} must contain a Hash!" unless Hash === @config
       validate
     end
 
@@ -84,7 +122,7 @@ module GlobalSession
     end
 
     def validate # :nodoc
-      ['attributes/signed', 'integrated', 'cookie/name',
+      ['attributes/signed', 'cookie/name',
        'timeout'].each {|k| validate_presence_of k}
     end
 
@@ -103,7 +141,7 @@ module GlobalSession
       elements.each do |element|
         object = object[element] if object
         if object.nil?
-          msg = "#{File.basename(@config_file)} does not specify required element #{elements.map { |x| "['#{x}']"}.join('')}"
+          msg = "Configuration does not specify required element #{elements.map { |x| "['#{x}']"}.join('')}"
           raise MissingConfiguration, msg
         end
       end

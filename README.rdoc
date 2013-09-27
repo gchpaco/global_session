@@ -9,6 +9,8 @@ In other words: it glues your semi-related Web apps together so they share the
 same bits of session state. This is done by putting the session itself into
 cookies.
 
+Maintained by the RightScale Teal Team
+
 == What Is It Not?
 
 This plugin does not provide a complete solution for identity management. In
@@ -51,15 +53,6 @@ particular, it does not provide any of the following:
     global_session['user'] = @user.id
     ...
     @current_user = User.find(global_session['user'])
-
-5) For easier programming, enable seamless integration with the local session:
-   (in global_session.yml)
-   common:
-     integrated: true
-   
-   (in your controllers)
-   session['user'] = @user.id #goes to the global session
-   session['local_thingie'] = @thingie.id #goes to the local session
 
 = Global Session Contents
 
@@ -176,7 +169,6 @@ is a good choice). In the GlobalSession configuration file, specify the
 class name of the directory under the 'common' section, like so:
 
   common:
-    integrated: true
     directory: MyCoolDirectory
 
 Copyright (c) 2010 Tony Spataro <code@tracker.xeger.net>, released under the MIT license

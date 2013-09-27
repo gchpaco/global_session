@@ -1,3 +1,24 @@
+# Copyright (c) 2012 RightScale Inc
+#
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+# LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 module GlobalSession
   # Rails integration for GlobalSession.
   #
@@ -16,9 +37,11 @@ module GlobalSession
     module ActionControllerInstanceMethods
       def self.included(base) # :nodoc:
         #Make sure a superclass hasn't already chained the methods...
-        unless base.instance_methods.include?("session_without_global_session")
-          base.alias_method_chain :session, :global_session
+        unless base.instance_methods.include?("log_processing_without_global_session")
+          base.alias_method_chain :log_processing, :global_session
         end
+
+        base.before_filter :global_session_initialize
       end
 
       # Shortcut accessor for global session configuration object.
@@ -39,26 +62,6 @@ module GlobalSession
       # session(Session):: the global session associated with the current request, nil if none
       def global_session
         @global_session
-      end
-
-      # Aliased version of ActionController::Base#session which will return the integrated
-      # global-and-local session object (IntegratedSession).
-      #
-      # === Return
-      # session(IntegratedSession):: the integrated session
-      def session_with_global_session
-        if global_session_options[:integrated] && global_session
-          unless @integrated_session &&
-                 (@integrated_session.local == session_without_global_session) && 
-                 (@integrated_session.global == global_session)
-            @integrated_session =
-              IntegratedSession.new(session_without_global_session, global_session)
-          end
-          
-          return @integrated_session
-        else
-          return session_without_global_session
-        end
       end
 
       # Filter to initialize the global session.
@@ -115,16 +118,16 @@ module GlobalSession
       #
       # === Return
       # name(Type):: Description
-      def log_processing
-        if logger && logger.info?
-          log_processing_for_request_id
-          log_processing_for_parameters
-        end
-      end
+      def log_processing_with_global_session
+        return unless logger && logger.info?
 
-      def log_processing_for_request_id # :nodoc:
-        if global_session && global_session.id
-          session_id = global_session.id + " (#{session[:session_id]})"
+        gs = request.env['global_session']
+        
+        if gs && gs.id
+          session_data = {}
+          gs.each_pair { |key, value| session_data[key] = value }
+
+          session_id = gs.id + " (#{session[:session_id] || request.session_options[:id]})"
         elsif session[:session_id]
           session_id = session[:session_id]
         elsif request.session_options[:id]
@@ -135,11 +138,10 @@ module GlobalSession
         request_id << "to #{params[:format]} " if params[:format]
         request_id << "(for #{request_origin.split[0]}) [#{request.method.to_s.upcase}]"
         request_id << "\n  Session ID: #{session_id}" if session_id
+        request_id << "\n  Session Data: #{session_data.inspect}" if session_data
 
         logger.info(request_id)
-      end
 
-      def log_processing_for_parameters # :nodoc:
         parameters = respond_to?(:filter_parameters) ? filter_parameters(params) : params.dup
         parameters = parameters.except!(:controller, :action, :format, :_method)
 

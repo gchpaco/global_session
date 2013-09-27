@@ -1,3 +1,24 @@
+# Copyright (c) 2012 RightScale Inc
+#
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+# LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 module GlobalSession
   # Indicates that the global session configuration file is malformatted or missing
   # required fields. Also used as a base class for other errors.
@@ -47,23 +68,17 @@ module GlobalSession
 end
 
 #Make sure gem dependencies are activated.
-require 'uuidtools'
+require 'right_support'
 require 'json'
-require 'active_support'
 
 #Require Ruby library dependencies
 require 'openssl'
 
 #Require the core suite of GlobalSession classes and modules
-basedir = File.dirname(__FILE__)
-require File.join(basedir, 'global_session', 'configuration')
-require File.join(basedir, 'global_session', 'directory')
-require File.join(basedir, 'global_session', 'encoding')
-require File.join(basedir, 'global_session', 'session')
-require File.join(basedir, 'global_session', 'integrated_session')
+require 'global_session/configuration'
+require 'global_session/directory'
+require 'global_session/encoding'
+require 'global_session/session'
 
-#Preemptively try to activate the Rails plugin, ignoring errors
-begin
-  require File.join(basedir, 'global_session', 'rails')  
-rescue Exception => e
-end
+# TODO: This should be done in the caller instead
+require 'global_session/rails'
