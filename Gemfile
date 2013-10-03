@@ -2,9 +2,7 @@ source 'https://rubygems.org'
 
 gem 'json', '~> 1.4'
 gem 'rack-contrib', '~> 1.0'
-gem 'right_support', ['>= 2.8.1', '< 3.0'],
-    :git => 'git://github.com/rightscale/right_support.git',
-    :branch => 'teal_13_11_acu118023_global_session_v3'
+gem 'right_support', ['>= 2.8.2', '< 3.0']
 gem 'simple_uuid', '>= 0.2.0'
 
 group :development do
