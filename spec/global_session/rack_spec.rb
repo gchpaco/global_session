@@ -20,70 +20,6 @@ describe GlobalSession::Rack::Middleware do
     @keystore = KeyFactory.new
     @keystore.create('authority1', true)
     @keystore.create('authority2', false)
-  end
-
-  after(:all) do
-    @keystore.destroy
-  end
-
-  before(:each) do
-    @config = Tempfile.new("config")
-  end
-
-  after(:each) do
-    @config.close(true)
-    @keystore.reset
-  end
-
-  context :initialize do
-    it 'uses a GlobalSession::Directory by default' do
-      @config << <<EOS
-  common:
-    attributes:
-      signed: [user]
-      insecure: [favorite_color]
-    timeout: 60
-    cookie:
-      name: global_session_cookie
-      domain: foobar.com
-    trust: [authority1]
-    authority: authority1
-EOS
-      @config.close
-
-      @app = GlobalSession::Rack::Middleware.new(@inner_app, @config.path, @keystore.dir)
-      @app.instance_variable_get(:@directory).kind_of?(GlobalSession::Directory).should be_true
-    end
-
-    it 'uses a custom directory class if specified' do
-      @config << <<EOS
-  common:
-    directory: Wacky::WildDirectory
-    attributes:
-      signed: [user]
-      insecure: [favorite_color]
-    timeout: 60
-    cookie:
-      name: global_session_cookie
-      domain: foobar.com
-    trust: [authority1]
-    authority: authority1
-EOS
-      @config.close
-
-      @app = GlobalSession::Rack::Middleware.new(@inner_app, @config.path, @keystore.dir)
-      @app.instance_variable_get(:@directory).kind_of?(Wacky::WildDirectory).should be_true
-    end
-  end
-end
-
-describe GlobalSession::Rack::Middleware do
-  include SpecHelper
-
-  before(:all) do
-    @keystore = KeyFactory.new
-    @keystore.create('authority1', true)
-    @keystore.create('authority2', false)
     mock_config('common/attributes/signed', ['user'])
     mock_config('common/attributes/insecure', ['favorite_color'])
     mock_config('test/timeout', '60')
@@ -115,6 +51,23 @@ describe GlobalSession::Rack::Middleware do
   after(:each) do
     @keystore.reset
     reset_mock_config
+  end
+
+  context :initialize do
+    before(:each) do
+      @inner_app.should_receive(:call).never
+    end
+
+    it 'uses a GlobalSession::Directory by default' do
+      @app = GlobalSession::Rack::Middleware.new(@inner_app, @config, @keystore.dir)
+      @app.instance_variable_get(:@directory).kind_of?(GlobalSession::Directory).should be_true
+    end
+
+    it 'uses a custom directory class if specified' do
+      mock_config('common/directory', 'Wacky::WildDirectory')
+      @app = GlobalSession::Rack::Middleware.new(@inner_app, @config, @keystore.dir)
+      @app.instance_variable_get(:@directory).kind_of?(Wacky::WildDirectory).should be_true
+    end
   end
 
   context :renew_cookie do
