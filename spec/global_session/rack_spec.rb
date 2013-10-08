@@ -58,18 +58,45 @@ describe GlobalSession::Rack::Middleware do
     end
 
     it 'uses a GlobalSession::Directory by default' do
-      @app = GlobalSession::Rack::Middleware.new(@inner_app, @config, @keystore.dir)
-      @app.instance_variable_get(:@directory).kind_of?(GlobalSession::Directory).should be_true
+      app = GlobalSession::Rack::Middleware.new(@inner_app, @config, @keystore.dir)
+      app.instance_variable_get(:@directory).kind_of?(GlobalSession::Directory).should be_true
     end
 
     it 'uses a custom directory class if specified' do
       mock_config('common/directory', 'Wacky::WildDirectory')
-      @app = GlobalSession::Rack::Middleware.new(@inner_app, @config, @keystore.dir)
-      @app.instance_variable_get(:@directory).kind_of?(Wacky::WildDirectory).should be_true
+      app = GlobalSession::Rack::Middleware.new(@inner_app, @config, @keystore.dir)
+      app.instance_variable_get(:@directory).kind_of?(Wacky::WildDirectory).should be_true
     end
   end
 
   context :call do
+    context 'reading the cookie' do
+      before(:each) do
+        @inner_app.should_receive(:call)
+      end
+
+      it 'reads the authorization header' do
+        flexmock(@app).should_receive(:read_authorization_header).and_return(true)
+        flexmock(@app).should_receive(:read_cookie).never
+        flexmock(@app).should_receive(:create_session).never
+        @app.call(@env)
+      end
+
+      it 'falls back to reading a cookie' do
+        flexmock(@app).should_receive(:read_authorization_header).and_return(false)
+        flexmock(@app).should_receive(:read_cookie).and_return(true)
+        flexmock(@app).should_receive(:create_session).never
+        @app.call(@env)
+      end
+
+      it 'falls back to creating a new session' do
+        flexmock(@app).should_receive(:read_authorization_header).and_return(false)
+        flexmock(@app).should_receive(:read_cookie).and_return(false)
+        flexmock(@app).should_receive(:create_session).and_return(true)
+        @app.call(@env)
+      end
+    end
+
     context 'when the session becomes invalid during a request' do
       before(:each) do
         @inner_app.should_receive(:call).and_return { |env| env['global_session'].invalidate!; [] }
