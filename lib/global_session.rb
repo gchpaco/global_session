@@ -46,7 +46,17 @@ module GlobalSession
   # Indicates that a client submitted a request with a session cookie that could not
   # be decoded or decompressed.
   #
-  class MalformedCookie < ClientError; end
+  class MalformedCookie < ClientError
+    attr_reader :cookie
+
+    def initialize(message, cookie=nil)
+      if cookie.nil?
+        super(message)
+      else
+        super("(data[0..4]: '%s') - %s" % [cookie[0..4], message])
+      end
+    end
+  end
 
   # Indicates that application code tried to put an unserializable object into the glboal
   # session hash. Because the global session is serialized as JSON and not all Ruby types

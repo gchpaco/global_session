@@ -34,18 +34,16 @@ module GlobalSession::Session
     guess_version(cookie).new(directory, cookie)
   end
 
-  private
-
   def self.guess_version(cookie)
     case cookie
-    when /^WzM/
+    when /^WzM/ # == "[3"
       V3
-    when /^l9o/
+    when /^l9/  # == binary msgpack symbol for "beginning of array"
       V2
-    when /^eNo/
+    when /^eN/  # == zlib-compressed form of "{"
       V1
     else
-      V3
+      V1        # due to zlib compression, there might be corner cases with the eN prefix
     end
   end
 end
