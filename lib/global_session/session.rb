@@ -34,8 +34,6 @@ module GlobalSession::Session
     guess_version(cookie).new(directory, cookie)
   end
 
-  private
-
   def self.guess_version(cookie)
     case cookie
     when /^WzM/ # == "[3"
