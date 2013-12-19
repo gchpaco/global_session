@@ -220,7 +220,7 @@ module GlobalSession::Session
         json = Zlib::Inflate.inflate(zbin)
         hash = GlobalSession::Encoding::JSON.load(json)
       rescue Exception => e
-        mc = GlobalSession::MalformedCookie.new("Caused by #{e.class.name}: #{e.message}")
+        mc = GlobalSession::MalformedCookie.new("Caused by #{e.class.name}: #{e.message}", cookie)
         mc.set_backtrace(e.backtrace)
         raise mc
       end

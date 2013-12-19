@@ -253,7 +253,7 @@ module GlobalSession::Session
         array, signature = self.class.decode_cookie(cookie)
         hash = attribute_array_to_hash(array)
       rescue Exception => e
-        mc = GlobalSession::MalformedCookie.new("Caused by #{e.class.name}: #{e.message}")
+        mc = GlobalSession::MalformedCookie.new("Caused by #{e.class.name}: #{e.message}", cookie)
         mc.set_backtrace(e.backtrace)
         raise mc
       end
