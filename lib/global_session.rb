@@ -50,7 +50,11 @@ module GlobalSession
     attr_reader :cookie
 
     def initialize(message, cookie=nil)
-      super("(data[0..4]: '%s') - %s" % [cookie[0..4], message])
+      if cookie.nil?
+        super(message)
+      else
+        super("(data[0..4]: '%s') - %s" % [cookie[0..4], message])
+      end
     end
   end
 
