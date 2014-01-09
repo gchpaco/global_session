@@ -208,7 +208,7 @@ module GlobalSession::Session
       when Numeric, String, NilClass
         output = input
       else
-        raise UnserializableType, "Objects of type #{input.class.name} cannot be serialized in the global session"
+        raise GlobalSession::UnserializableType, "Objects of type #{input.class.name} cannot be serialized in the global session"
       end
 
       return output
