@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = "global_session"
-  s.version = "3.0.2"
+  s.version = "3.0.3"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Tony Spataro"]
-  s.date = "2013-12-19"
+  s.date = "2014-03-12"
   s.description = "This Rack middleware allows several web apps in an authentication domain to share session state, facilitating single sign-on in a distributed web app. It only provides session sharing and does not concern itself with authentication or replication of the user database."
   s.email = "support@rightscale.com"
   s.extra_rdoc_files = [
