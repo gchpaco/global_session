@@ -89,8 +89,18 @@ require 'global_session/configuration'
 require 'global_session/directory'
 require 'global_session/encoding'
 require 'global_session/session'
+require 'global_session/rack'
 
 #Preemptively try to activate the Rails plugin
-if require_succeeds?('action_pack') && require_succeeds?('action_controller')
-  require 'global_session/rails'
+if require_succeeds?('action_pack') &&
+   require_succeeds?('action_controller')
+
+  action_pack = Gem.loaded_specs['action_pack']
+  action_controller = Gem.loaded_specs['action_controller']
+
+  # Make sure we are dealing with Rails 2.x, not 3.x
+  if action_pack && action_pack.version.to_s =~ /^2\./ &&
+     action_controller && action_controller.version.to_s =~ /^2\./
+    require 'global_session/rails'
+  end
 end
