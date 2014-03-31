@@ -54,6 +54,7 @@ module GlobalSession
         super(message)
       else
         super("(data[0..4]: '%s') - %s" % [cookie[0..4], message])
+        @cookie = cookie
       end
     end
   end
