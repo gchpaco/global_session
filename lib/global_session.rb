@@ -95,8 +95,8 @@ require 'global_session/rack'
 if require_succeeds?('action_pack') &&
    require_succeeds?('action_controller')
 
-  action_pack = Gem.loaded_specs['action_pack']
-  action_controller = Gem.loaded_specs['action_controller']
+  action_pack = Gem.loaded_specs['action_pack'] || Gem.loaded_specs['actionpack']
+  action_controller = Gem.loaded_specs['action_controller'] || Gem.loaded_specs['actioncontroller']
 
   # Make sure we are dealing with Rails 2.x, not 3.x
   if action_pack && action_pack.version.to_s =~ /^2\./ &&
