@@ -9,7 +9,12 @@ In other words: it glues your semi-related Web apps together so they share the
 same bits of session state. This is done by putting the session itself into
 cookies.
 
-Maintained by the RightScale Teal Team
+Maintained by
+ - [Sapphire Team](https://wookiee.rightscale.com/display/rightscale/Meet+the+Sapphire+Team)
+
+Merge to master whitelist
+ - @tony-spataro-rs
+ - @ryanwilliamson
 
 == What Is It Not?
 
