@@ -28,14 +28,14 @@ describe GlobalSession::Session do
         @cookie = k.new(@directory).to_s
       end
 
-      context :new do
+      context '.new' do
         it 'creates a compatible session object' do
           @session = GlobalSession::Session.new(@directory, @cookie)
           @session.should be_a(k)
         end
       end
 
-      context :decode_cookie do
+      context '.decode_cookie' do
         it 'returns useful debug info' do
           h = k.decode_cookie(@cookie)
           h.should respond_to(:each)
@@ -45,6 +45,12 @@ describe GlobalSession::Session do
   end
 
   context 'given garbage' do
-    it 'raises ArgumentError'
+    context '.new' do
+      it 'raises MalformedCookie' do
+        expect {
+          GlobalSession::Session.new(@directory, 'hi mom')
+        }.to raise_error(GlobalSession::MalformedCookie)
+      end
+    end
   end
 end

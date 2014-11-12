@@ -112,12 +112,17 @@ module GlobalSession::Session
     # secure attributes have changed since the session was instantiated, compute
     # a fresh RSA signature.
     #
-    # === Return
-    # cookie(String):: The B64cookie-encoded JSON-serialized global session
+    # @return [String] a B64cookie-encoded JSON-serialized global session
+    # @raise [GlobalSession::UnserializableType] if the attributes hash contains
     def to_s
       if @cookie && !@dirty_insecure && !@dirty_secure
         #use cached cookie if nothing has changed
         return @cookie
+      end
+
+      unless serializable?(@signed) && serializable?(@insecure)
+        raise GlobalSession::UnserializableType,
+              "Attributes hash contains non-String keys, cannot be cleanly marshalled"
       end
 
       hash = {'v' => 3,
@@ -368,6 +373,24 @@ module GlobalSession::Session
         'ds' => array[5],
         'dx' => array[6],
       }
+    end
+
+    # Determine whether an object can be cleanly round-tripped to JSON
+    # @param [Object] obj
+    # @return [Boolean]
+    def serializable?(obj)
+      case obj
+      when Numeric, String, TrueClass, FalseClass, NilClass, Symbol
+        true
+      when Array
+        obj.each { |e| serializable?(e) }
+      when Hash
+        obj.all? do |k, v|
+          k.is_a?(String) && serializable?(v)
+        end
+      else
+        false
+      end
     end
   end
 end
