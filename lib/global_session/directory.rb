@@ -22,7 +22,7 @@
 require 'set'
 
 module GlobalSession
-  # The global session directory, which provides some lookup and decision services
+  # The global session directory, which provides lookup and decision services
   # to instances of Session.
   #
   # The default implementation is simplistic, but should be suitable for most applications.
@@ -48,8 +48,8 @@ module GlobalSession
   # authority and all GlobalSessions created will be signed by that
   # authority's private key.
   #
-  # If more than one key file is found, Directory will raise an error
-  # at initialization time.
+  # If more than one private key file is found, Directory will raise
+  # an error at initialization time.
   #
   class Directory
     attr_reader :configuration, :authorities, :private_key
