@@ -94,7 +94,7 @@ module GlobalSession
     def initialize(config, environment)
       if config.is_a?(Hash)
         @config = config
-      elsif File.readable?(config)
+      elsif File.file?(config)
         data = YAML.load(File.read(config))
         unless data.is_a?(Hash)
           raise TypeError, "Configuration file #{File.basename(config)} must contain a hash as its top-level element"
@@ -137,7 +137,12 @@ module GlobalSession
     # true always
     def validate_presence_of(key)
       elements = key.split '/'
-      object = get(elements.shift, false)
+      top_key = elements.shift
+      object = get(top_key, false)
+      if object.nil?
+        msg = "Configuration does not specify required element '#{top_key}'"
+        raise MissingConfiguration, msg
+      end
       elements.each do |element|
         object = object[element] if object
         if object.nil?
