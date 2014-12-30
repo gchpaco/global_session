@@ -54,8 +54,8 @@ module GlobalSession
 
         klass = nil
         begin
-          klass_name      = @configuration['directory'] || 'GlobalSession::Directory'
-          klass = klass_name.to_const
+          klass_name = @configuration['directory'] || 'GlobalSession::Directory'
+          klass = klass_name.to_const unless klass_name.is_a?(Directory)
         rescue Exception => e
           raise GlobalSession::ConfigurationError, "Invalid/unknown directory class name #{klass_name}"
         end
