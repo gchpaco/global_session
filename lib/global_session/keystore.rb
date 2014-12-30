@@ -1,0 +1,141 @@
+# Copyright (c) 2014- RightScale Inc
+#
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+# LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+require 'set'
+require 'uri'
+
+module GlobalSession
+  class Keystore
+    # @return [Configuration] shared configuration object
+    attr_reader :configuration
+
+    # @return [Hash] map of String authority-names to OpenSSL::PKey public-keys
+    attr_reader :public_keys
+
+    # @return [nil, String] name of local authority if we are one, else nil
+    attr_reader :private_key_name
+
+    # @return [nil,OpenSSL::PKey] local authority key if we are an authority, else nil
+    attr_reader :private_key
+
+    # @return a representation of the object suitable for printing to the console
+    def inspect
+      "<#{self.class.name} @configuration=#{@configuration.inspect}>"
+    end
+
+    def initialize(configuration)
+      @configuration = configuration
+      load
+    end
+
+    private
+
+    # Load all public and/or private keys from location(s) specified in the configuration's
+    # "keystore" stanza.
+    #
+    # @raise [ConfigurationError] if some authority's public key has already been loaded
+    def load
+      # initializes to empty array if config is missing anything
+      locations = ((configuration['keystore'] || {})['public'] || [])
+
+      locations.each do |location|
+        uri = URI.parse(location)
+        case uri.scheme
+        when 'file'
+          # Our preference is for absolute URIs that have a valid scheme and authority
+          load_public_key(uri.path)
+        else
+          raise ConfigurationError, "unsupported URI scheme: " + location
+        end
+      end
+
+      location = (configuration['keystore'] || {})['private']
+      location ||= ENV['GLOBAL_SESSION_PRIVATE_KEY']
+      if location # then we must be an authority; load our key
+        uri = URI.parse(location)
+        case uri.scheme
+        when 'file'
+          load_private_key(uri.path)
+        else
+          raise ConfigurationError, "unsupported URI scheme: " + location
+        end
+      end
+    rescue URI::InvalidURIError => e
+      raise ConfigurationError, e.message
+    end
+
+    # Load a single authority's public key, or an entire directory full of public keys. Assume
+    # that the basenames of the key files are the authority names, e.g. "dev.pub" --> "dev".
+    #
+    # @param [String] path to file or directory to load
+    # @raise [Errno::ENOENT] if path is neither a file nor a directory
+    # @raise [ConfigurationError] if some authority's public key has already been loaded
+    def load_public_key(path)
+      @public_keys ||= {}
+
+      if File.directory?(path)
+        Dir.glob(File.join(path, '*')).each do |file|
+          load_public_key(file)
+        end
+      elsif File.file?(path)
+        name = File.basename(path, '.*')
+        key  = OpenSSL::PKey::RSA.new(File.read(path))
+        # ignore private keys (which legacy config allowed to coexist with public keys)
+        unless key.private?
+          if @public_keys.has_key?(name)
+            raise ConfigurationError, "Already loaded public key for #{name}"
+          else
+            @public_keys[name] = key
+          end
+        end
+      else
+        raise Errno::ENOENT.new("Path is neither a file nor a directory: " + path)
+      end
+    end
+
+    # Load a private key. Assume that the basename of the key file is the local authority name,
+    # e.g. "dev.key" --> "dev".
+    #
+    # @param [String] path to private-key file
+    # @raise [Errno::ENOENT] if path is not a file
+    # @raise [ConfigurationError] if some private key has already been loaded
+    def load_private_key(path)
+      if File.directory?(path)
+        # Arbitrarily pick the first key file found in the directory
+        path = Dir.glob(File.join(path, '*.key')).first
+      end
+
+      if File.file?(path)
+        if @private_key.nil?
+          name        = File.basename(path, '.*')
+          private_key = OpenSSL::PKey::RSA.new(File.read(path))
+          raise ConfigurationError, "Expected #{key_file} to contain an RSA private key" unless private_key.private?
+          @private_key      = private_key
+          @private_key_name = name
+        else
+          raise ConfigurationError, "Only one private key is allowed; already loaded #{@private_key_name}, cannot also load #{path}"
+        end
+      else
+        raise Errno::ENOENT.new("Path is not a file: " + path)
+      end
+    end
+  end
+end

@@ -17,9 +17,9 @@ describe GlobalSession::Rack::Middleware do
   include SpecHelper
 
   before(:all) do
-    @keystore = KeyFactory.new
-    @keystore.create('authority1', true)
-    @keystore.create('authority2', false)
+    @key_factory = KeyFactory.new
+    @key_factory.create('authority1', true)
+    @key_factory.create('authority2', false)
     mock_config('common/attributes/signed', ['user'])
     mock_config('common/attributes/insecure', ['favorite_color'])
     mock_config('test/timeout', '60')
@@ -29,12 +29,12 @@ describe GlobalSession::Rack::Middleware do
   end
 
   after(:all) do
-    @keystore.destroy
+    @key_factory.destroy
   end
 
   before(:each) do
     @config    = mock_config
-    @directory = GlobalSession::Directory.new(@config, @keystore.dir)
+    @directory = GlobalSession::Directory.new(@config, @key_factory.dir)
 
     @inner_app = flexmock('Rack App')
     @app = GlobalSession::Rack::Middleware.new(@inner_app, @config, @directory)
@@ -48,7 +48,7 @@ describe GlobalSession::Rack::Middleware do
   end
 
   after(:each) do
-    @keystore.reset
+    @key_factory.reset
     reset_mock_config
   end
 
@@ -58,13 +58,13 @@ describe GlobalSession::Rack::Middleware do
     end
 
     it 'uses a GlobalSession::Directory by default' do
-      app = GlobalSession::Rack::Middleware.new(@inner_app, @config, @keystore.dir)
+      app = GlobalSession::Rack::Middleware.new(@inner_app, @config, @key_factory.dir)
       app.instance_variable_get(:@directory).kind_of?(GlobalSession::Directory).should be_true
     end
 
     it 'uses a custom directory class if specified' do
       mock_config('common/directory', 'Wacky::WildDirectory')
-      app = GlobalSession::Rack::Middleware.new(@inner_app, @config, @keystore.dir)
+      app = GlobalSession::Rack::Middleware.new(@inner_app, @config, @key_factory.dir)
       app.instance_variable_get(:@directory).kind_of?(Wacky::WildDirectory).should be_true
     end
   end
@@ -112,13 +112,14 @@ describe GlobalSession::Rack::Middleware do
       before(:each) do
         @inner_app.should_receive(:call)
         @cookie_jar.should_receive(:has_key?).with('global_session_cookie').and_return(true)
-        @cookie_jar.should_receive(:[]).with('global_session_cookie') #any number of times
+        @cookie_jar.should_receive(:[]).with('global_session_cookie').and_return('a cookie')
+        @directory = flexmock(@directory)
         @fresh_session = GlobalSession::Session.new(@directory)
       end
 
       it 'swallows client errors' do
-        flexmock(@directory).should_receive(:load_session).once.and_raise(GlobalSession::ClientError)
-        flexmock(@directory).should_receive(:create_session).once.and_return(@fresh_session)
+        @directory.should_receive(:load_session).and_raise(GlobalSession::ClientError)
+        @directory.should_receive(:create_session).never
         @app.call(@env)
         @env.should have_key('global_session')
         @env.should have_key('global_session.error')
@@ -126,8 +127,8 @@ describe GlobalSession::Rack::Middleware do
       end
 
       it 'swallows configuration errors' do
-        flexmock(@directory).should_receive(:load_session).once.and_raise(GlobalSession::ConfigurationError)
-        flexmock(@directory).should_receive(:create_session).once.and_return(@fresh_session)
+        @directory.should_receive(:load_session).and_raise(GlobalSession::ConfigurationError)
+        @directory.should_receive(:create_session).never
         @app.call(@env)
         @env.should have_key('global_session')
         @env.should have_key('global_session.error')
@@ -135,15 +136,15 @@ describe GlobalSession::Rack::Middleware do
       end
 
       it 'raises other errors' do
-        flexmock(@directory).should_receive(:load_session).once.and_raise(StandardError)
-        flexmock(@directory).should_receive(:create_session).once.and_return(@fresh_session)
+        @directory.should_receive(:load_session).and_raise(StandardError)
+        @directory.should_receive(:create_session).once.and_return(@fresh_session)
         @inner_app.should_receive(:call).never
         lambda { @app.call(@env) }.should raise_error(StandardError)
       end
 
       it "does not include the backtrace for expired session exceptions" do
-        flexmock(@directory).should_receive(:load_session).once.and_raise(GlobalSession::ExpiredSession)
-        flexmock(@directory).should_receive(:create_session).once.and_return(@fresh_session)
+        @directory.should_receive(:load_session).and_raise(GlobalSession::ExpiredSession)
+        @directory.should_receive(:create_session).once.and_return(@fresh_session)
         @env["rack.logger"] = FakeLogger.new
         flexmock(@env["rack.logger"]).should_receive(:error).with("GlobalSession::ExpiredSession while reading session cookie: GlobalSession::ExpiredSession")
         @app.call(@env)

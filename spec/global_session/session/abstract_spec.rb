@@ -5,13 +5,13 @@ describe GlobalSession::Session::Abstract do
   include SpecHelper
 
   before(:all) do
-    @keystore = KeyFactory.new
-    @keystore.create('authority1', true)
-    @keystore.create('authority2', false)
+    @key_factory = KeyFactory.new
+    @key_factory.create('authority1', true)
+    @key_factory.create('authority2', false)
   end
 
   after(:all) do
-    @keystore.destroy
+    @key_factory.destroy
   end
 
   # Abstract#initialize can't be invoked directly, so we test its subclasses
@@ -25,7 +25,7 @@ describe GlobalSession::Session::Abstract do
         mock_config('test/timeout', 60)
         mock_config('test/attributes/signed', ['user'])
         mock_config('test/attributes/unsigned', ['account'])
-        @directory = GlobalSession::Directory.new(mock_config, @keystore.dir)
+        @directory = GlobalSession::Directory.new(mock_config, @key_factory.dir)
         @session = subclass.new(@directory)
       end
 

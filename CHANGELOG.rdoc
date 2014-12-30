@@ -1,3 +1,9 @@
+== 3.0.5 (next)
+
+Split Directory class into Directory & Keystore, retaining some backward-compatibility shims
+inside Directory. In future, these shims will be removed and all key management operations
+should work through Keystore.
+
 == 2.0
 
 The format of the global session cookie has been reinvented; it now uses msgpack and delegates

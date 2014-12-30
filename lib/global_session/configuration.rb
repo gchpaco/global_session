@@ -35,8 +35,8 @@ module GlobalSession
   # * ephemeral
   # * timeout
   # * renew
-  # * authority
-  # * trust
+  # * authority (optional - inferred from presence of private key file)
+  # * trust (optional - inferred from presence/name of public key files)
   # * directory
   # * cookie
   #     * version
@@ -121,9 +121,32 @@ module GlobalSession
       get(key, true)
     end
 
+    # Writer for configuration elements. Writes to an environment-specific stanza if one is present,
+    # else writes to the common stanza. DOES NOT OVERWRITE the key's value if it already has one!
+    #
+    # @param [String] key
+    # @param optional [Object] the value to write, or empty-hash as a default
+    def []=(key, value={})
+      if @config.has_key?(@environment)
+        @config[@environment][key] ||= value
+      else
+        @config['common'][key] ||= value
+      end
+    rescue NoMethodError
+      raise MissingConfiguration, "Configuration key '#{key}' not found"
+    end
+
+    # Determine whether a given configuration key was specified.
+    #
+    # @return [Boolean] true if the key is present in the common or per-environment stanzas
+    def has_key?(k)
+      @config[@environment].has_key?(k) || @config['common'].has_key?(k)
+    end
+
+    alias key? has_key?
+
     def validate # :nodoc
-      ['attributes/signed', 'cookie/name',
-       'timeout'].each {|k| validate_presence_of k}
+      ['attributes/signed', 'cookie/name', 'timeout'].each {|k| validate_presence_of k}
     end
 
     protected
@@ -138,7 +161,7 @@ module GlobalSession
     def validate_presence_of(key)
       elements = key.split '/'
       top_key = elements.shift
-      object = get(top_key, false)
+      object = get(top_key, true) # pretend we're validated in order to get inheritance
       if object.nil?
         msg = "Configuration does not specify required element '#{top_key}'"
         raise MissingConfiguration, msg
@@ -155,15 +178,32 @@ module GlobalSession
 
     private
 
+    # Get a configuration key.
+    #
+    # @return [Object] the value of the desired key
+    # @raise [MissingConfiguration] if the key is not found
+    # @param [String] key
+    # @param [Boolean] if true, check both the common and per-environment stanzas for the key
     def get(key, validated) # :nodoc
-      if @config.has_key?(@environment) &&
-         @config[@environment].has_key?(key)
-        return @config[@environment][key]
+      if validated
+        # Fancy inheritance logic
+        if ('common' == key) && @config.key?(key)
+          # The common stanza itself
+          @config[key]
+        elsif (@environment == key) && @config.key?(key)
+          # The environment-specific stanza itself
+          @config[key]
+        elsif @config.key?(@environment) && @config[@environment].key?(key)
+          # Some key in the environment-specific stanza
+          return @config[@environment][key]
+        elsif @config.key?('common') && @config['common'].key?(key)
+          # By process of elimination, some key in the common stanza
+          @config['common'][key]
+        end
       else
-        @config['common'][key]
+        # Fail sauce
+        raise MissingConfiguration, "Configuration key '#{key}' not found"
       end
-    rescue NoMethodError
-      raise MissingConfiguration, "Configuration key '#{key}' not found"
     end
   end
 end

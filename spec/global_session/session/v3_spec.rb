@@ -9,7 +9,7 @@ describe GlobalSession::Session::V3 do
     mock_config('test/authority', 'authority1')
     mock_config('common/attributes/signed', ['user'])
     mock_config('common/attributes/insecure', ['favorite_color'])
-    @directory        = GlobalSession::Directory.new(mock_config, @keystore.dir)
+    @directory        = GlobalSession::Directory.new(mock_config, @key_factory.dir)
     @original_session = described_class.new(@directory)
     @cookie           = @original_session.to_s
   end

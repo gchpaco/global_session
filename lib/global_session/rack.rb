@@ -37,31 +37,39 @@ module GlobalSession
       # is the ticket.
       #
       # @param [Configuration] configuration
-      # @param [Directory] directory
+      # @param optional [String,Directory] directory the directory class name (DEPRECATED) or an actual instance of Directory
       #
       # @yield if a block is provided, yields to the block to fetch session data from request state
       # @yieldparam [Hash] env Rack request environment is passed as a yield parameter
-      def initialize(app, configuration, directory, &block)
+      def initialize(app, configuration, directory=nil, &block)
         @app = app
 
+        # Initialize shared configuration
+        # @deprecated require Configuration object in v4
         if configuration.instance_of?(String)
           @configuration = Configuration.new(configuration, ENV['RACK_ENV'] || 'development')
         else
           @configuration = configuration
         end
 
+        klass = nil
         begin
           klass_name      = @configuration['directory'] || 'GlobalSession::Directory'
-          directory_klass = klass_name.to_const
+          klass = klass_name.to_const
         rescue Exception => e
-          raise GlobalSession::ConfigurationError, "Invalid/unknown directory class name #{@configuration['directory']}"
+          raise GlobalSession::ConfigurationError, "Invalid/unknown directory class name #{klass_name}"
         end
 
-        if directory.instance_of?(String)
-          @directory = directory_klass.new(@configuration, directory)
+        # Initialize the directory
+        # @deprecated require Directory object in v4
+        if klass.instance_of?(Class)
+          @directory = klass.new(@configuration, directory)
         else
           @directory = directory
         end
+
+        # Initialize the keystore
+        @keystore = Keystore.new(@configuration)
 
         @cookie_retrieval = block
         @cookie_name      = @configuration['cookie']['name']
@@ -164,7 +172,7 @@ module GlobalSession
       # @return [true] always returns true
       # @param [Hash] env Rack request environment
       def renew_cookie(env)
-        return unless @directory.local_authority_name
+        return unless @configuration['authority']
         return if env['global_session.req.renew'] == false
 
         if (renew = @configuration['renew']) && env['global_session'] &&
@@ -180,7 +188,7 @@ module GlobalSession
       # @return [true] always returns true
       # @param [Hash] env Rack request environment
       def update_cookie(env)
-        return true unless @directory.local_authority_name
+        return true unless @configuration['authority']
         return true if env['global_session.req.update'] == false
 
         session = env['global_session']
@@ -218,7 +226,7 @@ module GlobalSession
       # @return [true] always returns true
       # @param [Hash] env Rack request environment
       def wipe_cookie(env)
-        return unless @directory.local_authority_name
+        return unless @configuration['authority']
         return if env['global_session.req.update'] == false
 
         env['rack.cookies'][@cookie_name] = {:value   => nil,
@@ -277,7 +285,7 @@ module GlobalSession
       #
       # @param [Hash] env Rack request environment
       def cookie_domain(env)
-        if @configuration['cookie'].key?('domain')
+        if @configuration['cookie'].has_key?('domain')
           # Use the explicitly provided domain name
           domain = @configuration['cookie']['domain']
         else
