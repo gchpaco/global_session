@@ -1,39 +1,40 @@
+Copyright (c) 2009-2015 RightScale, Inc. <support@rightscale.com>; see LICENSE for more details.
+
 = Introduction
 
 GlobalSession enables multiple heterogeneous Web applications to share
 session state in a cryptographically secure way, facilitating single sign-on
-and enabling easier development of distributed applications that
-make use of architectural strategies such as sharding or separation of concerns.
+and enabling easier development of distributed applications that make use of
+architectural strategies such as sharding or separation of concerns.
 
-In other words: it glues your semi-related Web apps together so they share the
-same bits of session state. This is done by putting the session itself into
-cookies.
+In other words: it glues your Web apps together by letting them share session state.
+This is done by putting the session itself into a cookie and adding some crypto to
+protect against tampering.
 
 Maintained by
- - [Sapphire Team](https://wookiee.rightscale.com/display/rightscale/Meet+the+Sapphire+Team)
+ - [RightScale Engineering](https://github.com/rightscale)
 
 Merge to master whitelist
  - @tony-spataro-rs
- - @ryanwilliamson
 
 == What Is It Not?
 
-This plugin does not provide a complete solution for identity management. In
+This gem does not provide a complete solution for identity management. In
 particular, it does not provide any of the following:
 
-* <b>federation</b> -- aka cross-domain single sign-on -- use OpenID for that.
+* <b>federation</b> -- aka cross-domain single sign-on -- use SAML for that.
 
 * <b>authentication</b> -- the application must authenticate the user.
 
 * <b>authorization</b> -- the application is responsible for using the contents
   of the global session to make authorization decisions.
 
-* <b>secrecy</b> -- global session attributes can be signed but never encrypted;
-  protect against third-party snooping using SSL. Group secrecy is expensive;
+* <b>secrecy</b> -- global session attributes can be signed but never encrypted.
+  Protect against third-party snooping using SSL. Group secrecy is expensive;
   if you don't want your users to see their session state, put it in a database,
   or in an encrypted local session cookie.
 
-* <b>replication</b> -- the authentication authorities must have some way to
+* <b>replication</b> -- the session authorities must have some way to
   share information about the database of users in order to authenticate
   them and place identifying information into the global session.
 
@@ -41,7 +42,9 @@ particular, it does not provide any of the following:
   notification when sessions are invalidated; they can override the default
   Directory implementation to do realtime revocation checking.
 
-= Example
+= Examples
+
+== Integration with Rails
 
 1) Create a basic config file and edit it to suit your needs:
     $ script/generate global_session_config mycoolapp.com
@@ -59,32 +62,45 @@ particular, it does not provide any of the following:
     ...
     @current_user = User.find(global_session['user'])
 
+== Integration with Other Ruby Web Frameworks
+
+Install the GlobalSession middleware into your Rack stack; pass a config and a directory
+object to its initializer. For instance, in config.ru:
+
+    configuration = GlobalSession::Configuration.new('path/to/config.yml', RACK_ENV)
+    directory = GlobalSession::Directory.new(configuration, 'path/to/keystore')
+    use ::GlobalSession::Rack::Middleware, configuration, directory
+
 = Global Session Contents
 
-Global session state is stored as a cookie in the user's browser. The cookie
-is a Zlib-compressed JSON dictionary containing the following stuff:
+Global session state is stored as a cookie in the user's browser and/or sent
+with every request as an HTTP Authorization header. If your app uses the
+Authorization header, then it's responsible for communicating new or changed
+header values to clients out-of-band (i.e. as part of an OAuth refresh-token
+operation). If your app uses the cookie, GlobalSession will take care of
+updating the cookie whenever session values change.
+
+Data-wise, the session is a JSON dictionary containing the following stuff:
 * session metadata (UUID, created-at, expires-at, signing-authority)
 * signed session attributes (e.g. the authenticated user ID)
 * insecure session attributes (e.g. the last-visited URL)
 * a cryptographic signature of the metadata and signed attributes
 
 The global session is unserialized and its signature is verified whenever
-a controller asks for one of its attributes. The cookie's value is updated
-whenever attributes change. As an optimization, the signature is only
-recomputed when the metadata or signed attributes have changed; insecure
-attributes can change "for free."
+Rack receives a request. The cookie's value is updated whenever attributes
+change. As an optimization, the signature is only recomputed when the metadata
+or signed attributes have changed; insecure attributes can change "for free."
 
 Because the security properties of attributes can vary, GlobalSession
 requires all _possible_ attributes to be declared up-front in the config
 file. The 'attributes' section of the config file defines the _schema_
 for the global session: which attributes can be used, which can be trusted
-to make authorization decisions (because they are signed), and are insecure
-and therefore act only as "hints" about the session.
+to make authorization decisions (because they are signed), and which are
+insecure and act only as "hints" about the session.
 
 Since the session is serialized as JSON, only a limited range of object
-types can be stored in it: strings, numbers, lists, hashes and other Ruby
-primitives. Ruby booleans (true/false) do not translate well into JSON
-and should be avoided.
+types can be stored in it: nil, strings, numbers, lists, hashes, booleans
+and other Ruby primitives.
 
 = Detailed Information
 
@@ -108,6 +124,9 @@ For example, in my GlobalSession configuration file I might specify that my
 cookie's domain is "example.com". My app nodes at app1.example.com and
 app2.example.com would be part of the global session domain, but my business
 partner's application at app3.partner.com could not participate.
+
+If your app uses an Authorization header instead of cookies, the domain-name
+constraint does not apply!
 
 == Authorities and Relying Parties
 
@@ -135,19 +154,19 @@ Here are some reasons you might consider dividing your systems into different
 authorities:
 * beta/staging system vs. production system
 * system hosted by a third party vs. system hosted internally
-* e-commerce node vs. storefront node vs. admin node
+* e-commerce app vs. storefront app vs. admin app
 
-== The Directory
+== The Keystore
 
-The Directory is a Ruby object instantiated by GlobalSession in order to
-perform lookups of public and private keys. Given an authority name (as found
-in a session cookie), the Directory can find the corresponding public key.
+The Directory is a Ruby object that provides lookups of public and private
+keys. Given an authority name (as found in a session cookie), the Directory
+can find the corresponding RSA public key.
 
-If the local system is an authority itself, #local_authority_name will
-return non-nil and #private_key will return a private key suitable for
-signing session attributes.
+If the local system is an authority itself, #private_key_name will
+return the authority name and #private_key will return an RSA private key
+suitable for signing session attributes.
 
-The Directory implementation included with GlobalSession uses the filesystem
+The Keystore implementation included with GlobalSession uses the filesystem
 as the backing store for its key pairs. Its #initialize method accepts a
 filesystem path that will be searched for files containing PEM-encoded public
 and private keys (the same format used by OpenSSH). This simple Directory
@@ -161,10 +180,38 @@ implementation relies on the following conventions:
 When used with a Rails app, GlobalSession expects to find its keystore in
 config/authorities. You can use the global_session generator to create new key
 pairs. Remember never to check a *.key file into a public repository!! (*.pub
-files can be checked into source control and distributed freely.) 
+files can be checked into source control and distributed freely.)
 
 If you wish all of the systems to stop trusting an authority, simply delete
 its public key from config/authorities and re-deploy your app.
+
+The keystore needs to be told where to find its keys. This is accomplished by
+setting some configuration attributes like so:
+
+    keystore:
+      public:
+        - config/authorities
+        - config/more_authorities
+      private: config/authorities/my_private.key
+
+The filename of keys is relevant; after stripping the *.pub or *.key extension,
+the remainder of the file's basename is taken to be the authority name. For
+instance, "production.pub" is the public key of the authority named "production"
+and "development.key" is the private key of the authority named "development."
+
+== The Directory
+
+The Directory is a Ruby object that performs session management operations,
+including:
+* Checking whether sessions have become invalid (e.g. after sign-out)
+* Creating new sessions
+* Unserializing existing sessions
+* Renewing sessions if they will expire
+* Updating session signatures
+
+In GlobalSession v3, Directory also presents methods for key management, but
+these are all delegated to the Keystore class. In v4, the concerns of Directory
+and Keystore will be fully separated.
 
 === Implementing Your Own Directory Provider
 
@@ -173,7 +220,6 @@ extends Directory and put the class somewhere in your app (the lib directory
 is a good choice). In the GlobalSession configuration file, specify the
 class name of the directory under the 'common' section, like so:
 
-  common:
-    directory: MyCoolDirectory
-
-Copyright (c) 2010 Tony Spataro <code@tracker.xeger.net>, released under the MIT license
+    common:
+      directory:
+        class: MyCoolDirectory

@@ -7,8 +7,10 @@ gem 'simple_uuid', '>= 0.2.0'
 
 group :development do
   gem 'cucumber', '~> 1.0'
+  gem 'ruby-debug', '~> 0.10',
+      :platforms => :ruby_18
   gem 'debugger', '~> 1.5',
-      :platforms => :ruby_19
+      :platforms => [:ruby_19, :ruby_20, :ruby_21]
   gem 'flexmock', '~> 0.8'
   gem 'httpclient'
   gem 'jeweler', '~> 1.8.3'
@@ -16,6 +18,4 @@ group :development do
   gem 'rake', '~> 0.8'
   gem 'right_develop', '~> 1.2'
   gem 'rspec', '~> 1.3'
-  gem 'ruby-debug', '~> 0.10',
-    :platforms => :ruby_18
 end

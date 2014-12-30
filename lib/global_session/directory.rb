@@ -31,7 +31,8 @@ module GlobalSession
   # setting to specify the class name of your implementation:  
   #
   #     common:
-  #       directory: MyCoolDirectory
+  #       directory:
+  #         class: MyCoolDirectory
   #
   # == Key Management
   #
@@ -40,23 +41,6 @@ module GlobalSession
   # but mostly they are stubs for Keystore functionality.
   #
   # For more information about key mangement, please refer to the Keystore class.
-  #
-  # === The Authority Keystore
-  # Directory uses one or more filesystem directories as a backing store for RSA
-  # public keys of global session authorities. The directories should
-  # contain one or more +*.pub+ files containing OpenSSH-format public
-  # RSA keys. The name of the pub file determines the name of the
-  # authority it represents.
-  #
-  # === The Local Authority
-  # Directory will infer the name of the local authority (if any) by
-  # looking for a private-key file in the keystore. If a +*.key+ file
-  # is found, then its name is taken to be the name of the local
-  # authority and all GlobalSessions created will be signed by that
-  # authority's private key.
-  #
-  # If more than one private key file is found, Directory will raise
-  # an error at initialization time.
   #
   class Directory
     # @return [Configuration] shared configuration object

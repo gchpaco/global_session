@@ -61,7 +61,7 @@ module SpecHelper
       last_key   = path.last
       first_keys.each do |key|
         hash[key] ||= {}
-        hash = hash[key]
+        hash = hash[key] if hash[key].is_a?(Hash)
       end
       hash[last_key] = value
     end

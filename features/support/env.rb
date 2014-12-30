@@ -24,6 +24,12 @@
 require 'rubygems'
 require 'bundler/setup'
 
+if RUBY_VERSION =~ /1\.8/
+  require 'ruby-debug'
+else
+  require 'debugger'
+end
+
 $: << File.expand_path('../../..', __FILE__)
 # We're using Jeweler, so our Gemfile can't reference our gemspec
 $: << File.expand_path('../../../lib', __FILE__)

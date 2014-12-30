@@ -95,8 +95,14 @@ describe GlobalSession::Rack::Middleware do
       app.instance_variable_get(:@directory).kind_of?(GlobalSession::Directory).should be_true
     end
 
-    it 'uses a custom directory class if specified' do
+    it 'uses a custom directory class (classic notation)' do
       mock_config('common/directory', 'Wacky::WildDirectory')
+      app = GlobalSession::Rack::Middleware.new(@inner_app, @config, @key_factory.dir)
+      app.instance_variable_get(:@directory).kind_of?(Wacky::WildDirectory).should be_true
+    end
+
+    it 'uses a custom directory class (modern notation)' do
+      mock_config('common/directory/class', 'Wacky::WildDirectory')
       app = GlobalSession::Rack::Middleware.new(@inner_app, @config, @key_factory.dir)
       app.instance_variable_get(:@directory).kind_of?(Wacky::WildDirectory).should be_true
     end

@@ -54,18 +54,39 @@ module GlobalSession
 
         klass = nil
         begin
-          klass_name = @configuration['directory'] || 'GlobalSession::Directory'
-          klass = klass_name.to_const unless klass_name.is_a?(Directory)
+          # v0.9.0 - v3.0.4: class name is the value of the 'directory' key
+          klass_name = @configuration['directory']
+
+          case klass_name
+          when Hash
+            # v3.0.5 and beyond: class name is in 'class' subkey
+            klass_name = klass_name['class']
+          when NilClass
+            # the eternal default, if the class name is not provided
+            klass_name = 'GlobalSession::Directory'
+          end
+
+          if klass_name.is_a?(String)
+            # for apps
+            klass = klass_name.to_const
+          else
+            # for specs that need to directly inject a class/object
+            klass = klass_name
+          end
         rescue Exception => e
-          raise GlobalSession::ConfigurationError, "Invalid/unknown directory class name #{klass_name}"
+          raise GlobalSession::ConfigurationError,
+                "Invalid/unknown directory class name: #{klass_name.inspect}"
         end
 
         # Initialize the directory
         # @deprecated require Directory object in v4
-        if klass.instance_of?(Class)
+        if klass.is_a?(Class)
           @directory = klass.new(@configuration, directory)
-        else
+        elsif klass.is_a?(Directory)
           @directory = directory
+        else
+          raise GlobalSession::ConfigurationError,
+                "Unsupported value for 'directory': expected Class or Directory, got #{klass.inspect}"
         end
 
         # Initialize the keystore
