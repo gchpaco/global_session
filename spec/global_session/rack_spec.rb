@@ -10,9 +10,10 @@ module Wacky
 
   # Stub directory used in tests to overcome stupid flexmock behavior
   class FakeDirectory < GlobalSession::Directory
-    attr_accessor :configuration, :keystore, :load_error, :cookie
+    attr_accessor :configuration, :keystore, :create_error, :load_error, :cookie
 
     def initialize(configuration=nil, keystore=nil, load_error=nil, cookie=nil)
+      super(configuration, keystore)
       @configuration = configuration
       @keystore = keystore
       @load_error = load_error
@@ -21,17 +22,21 @@ module Wacky
 
     def load_session(cookie)
       if @load_error
-        raise @load_error
+        le = @load_error
+        @load_error = nil
+        raise le
       else
-        cookie
+        super(cookie)
       end
     end
 
     def create_session
-      if @load_error
-        raise @load_error
+      if @create_error
+        le = @create_error
+        @create_error = nil
+        raise @create_error
       else
-        @cookie
+        super(@cookie)
       end
     end
   end
@@ -150,6 +155,7 @@ describe GlobalSession::Rack::Middleware do
     context 'when an error happens' do
       before(:each) do
         @directory = Wacky::FakeDirectory.new(@config, @keystore)
+        @app.directory = @directory # since the app was already initialized
         @fresh_session = GlobalSession::Session.new(@directory)
         @directory.cookie = @fresh_session.to_s
         mock_config('common/directory', @directory)
@@ -171,20 +177,19 @@ describe GlobalSession::Rack::Middleware do
         @app.call(@env)
         @env.should have_key('global_session')
         @env.should have_key('global_session.error')
-        @env['global_session.error'].should be_a(GlobalSession::MalformedCookie)
+        @env['global_session.error'].should be_a(GlobalSession::ConfigurationError)
       end
 
       it 'raises other errors' do
         @directory.load_error = StandardError.new
         @inner_app.should_receive(:call).never
-        @app.call(@env).should raise_error(StandardError)
+        expect { @app.call(@env) }.to raise_error(StandardError)
       end
 
       it "does not include the backtrace for expired session exceptions" do
-        pending('not working for some reason')
         @directory.load_error = GlobalSession::ExpiredSession.new
         @env["rack.logger"] = FakeLogger.new
-        flexmock(@env["rack.logger"]).should_receive(:error).with("GlobalSession::ExpiredSession")
+        flexmock(@env["rack.logger"]).should_receive(:error).with("GlobalSession::ExpiredSession while reading session cookie: GlobalSession::ExpiredSession")
         @app.call(@env)
         @env.should have_key('global_session')
         @env.should have_key('global_session.error')

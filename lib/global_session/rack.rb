@@ -29,6 +29,12 @@ module GlobalSession
     class Middleware
       LOCAL_SESSION_KEY = "rack.session".freeze
 
+      # @return [GlobalSession::Configuration]
+      attr_accessor :configuration
+
+      # @return [GlobalSession::Directory]
+      attr_accessor :directory
+
       # Make a new global session middleware.
       #
       # The optional block here controls an alternate ticket retrieval
