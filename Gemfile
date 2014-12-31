@@ -18,7 +18,9 @@ end
 group :development do
   gem 'ruby-debug', '~> 0.10',
       :platforms => :ruby_18
-  gem 'debugger', '~> 1.5',
+  gem 'pry', '~> 0.10',
+      :platforms => [:ruby_19, :ruby_20, :ruby_21]
+  gem 'pry-byebug', '~> 2.0',
       :platforms => [:ruby_19, :ruby_20, :ruby_21]
   gem 'jeweler', '~> 1.8.3'
 end

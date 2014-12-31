@@ -24,10 +24,15 @@
 require 'rubygems'
 require 'bundler/setup'
 
-if RUBY_VERSION =~ /1\.8/
-  require 'ruby-debug'
-else
-  require 'debugger'
+begin
+  if RUBY_VERSION =~ /^1\.8/
+    require 'ruby-debug'
+  else
+    require 'pry'
+    require 'pry-byebug'
+  end
+rescue LoadError
+  # no-op; debugger is purposefully omitted from some environments
 end
 
 $: << File.expand_path('../../..', __FILE__)

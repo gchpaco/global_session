@@ -6,10 +6,15 @@ require 'tempfile'
 require 'flexmock'
 require 'global_session'
 
-if RUBY_VERSION =~ /^1\.8/
-  require 'ruby-debug'
-else
-  require 'debugger'
+begin
+  if RUBY_VERSION =~ /^1\.8/
+    require 'ruby-debug'
+  else
+    require 'pry'
+    require 'pry-byebug'
+  end
+rescue LoadError
+  # no-op; debugger is purposefully omitted from some environments
 end
 
 Spec::Runner.configure do |config|
