@@ -15,10 +15,14 @@ describe GlobalSession::Session::Abstract do
   end
 
   # Abstract#initialize can't be invoked directly, so we test its subclasses
-  # instead.
-  GlobalSession::Session::Abstract.subclasses.each do |klass|
+  # instead. We do the reflection ourselves to avoid relying on ActiveSupport (Class#subclasses)
+  descendants = []
+  ObjectSpace.each_object(Class) do |k|
+    descendants.unshift k if k < GlobalSession::Session::Abstract
+  end
+  descendants.each do |klass|
     context "given a valid serialized #{klass}" do
-      let(:subclass) { klass.to_const }
+      let(:subclass) { klass }
       before(:each) do
         mock_config('test/trust', ['authority1'])
         mock_config('test/authority', 'authority1')

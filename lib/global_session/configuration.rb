@@ -19,6 +19,8 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+require 'yaml'
+
 module GlobalSession
   # Central point of access for GlobalSession configuration information. This is
   # mostly a very thin wrapper around the serialized hash written to the YAML config
