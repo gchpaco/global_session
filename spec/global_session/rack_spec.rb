@@ -60,8 +60,8 @@ describe GlobalSession::Rack::Middleware do
     mock_config('test/cookie/name', 'global_session_cookie')
     mock_config('test/trust', ['authority1'])
     mock_config('test/authority', 'authority1')
-    mock_config('test/keystore/public', "file:///#{@key_factory.dir}")
-    mock_config('test/keystore/private', "file:///#{@key_factory.dir}")
+    mock_config('test/keystore/public', @key_factory.dir)
+    mock_config('test/keystore/private', @key_factory.dir)
     @keystore = GlobalSession::Keystore.new(mock_config)
   end
 

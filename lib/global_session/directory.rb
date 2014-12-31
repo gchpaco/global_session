@@ -72,7 +72,7 @@ module GlobalSession
 
         @configuration['common'] ||= {}
         @configuration['common']['keystore'] ||= {}
-        @configuration['common']['keystore']['public'] = [normalize_file_uri(keystore_directory)]
+        @configuration['common']['keystore']['public'] = [keystore_directory]
 
         # Propagate a deprecated configuration option
         # @deprecated remove for v4.0
@@ -81,7 +81,7 @@ module GlobalSession
           raise ConfigurationError, "Key file #{private_key}.key not found in #{keystore_directory}" unless key_file
           @configuration['common'] ||= {}
           @configuration['common']['keystore'] ||= {}
-          @configuration['common']['keystore']['private'] = normalize_file_uri(keystore_directory)
+          @configuration['common']['keystore']['private'] = key_file
         end
       end
 
@@ -218,23 +218,5 @@ module GlobalSession
     def report_invalid_session(uuid, expired_at)
       @invalid_sessions << uuid
     end
-
-    private
-
-    # Ensure that the parameter is a well-formed file:/// URI (or die trying).
-    #
-    # @return [String] a guaranteed well-formed URI
-    # @param [String] path
-    # @raise [URI::InvalidURIError] if there is no way to interpret uri as a URI
-    def normalize_file_uri(path)
-      begin
-        uri = URI.parse(path)
-        if uri.scheme.nil? && File.exist?(uri.path)
-          return "file://#{uri}"
-        else
-          return uri.to_s
-        end
-      end
-    end
-  end  
+  end
 end

@@ -65,37 +65,19 @@ module GlobalSession
     private
 
     # Load all public and/or private keys from location(s) specified in the configuration's
-    # "keystore" stanza.
+    # "keystore/public" and "keystore/private" directives.
     #
     # @raise [ConfigurationError] if some authority's public key has already been loaded
     def load
-      # initializes to empty array if config is missing anything
-      locations = ((configuration['keystore'] || {})['public'] || [])
+      locations = Array((configuration['keystore'] || {})['public'] || [])
 
       locations.each do |location|
-        uri = URI.parse(location)
-        case uri.scheme
-        when 'file'
-          # Our preference is for absolute URIs that have a valid scheme and authority
-          load_public_key(uri.path)
-        else
-          raise ConfigurationError, "unsupported URI scheme: " + location
-        end
+        load_public_key(location)
       end
 
       location = (configuration['keystore'] || {})['private']
       location ||= ENV['GLOBAL_SESSION_PRIVATE_KEY']
-      if location # then we must be an authority; load our key
-        uri = URI.parse(location)
-        case uri.scheme
-        when 'file'
-          load_private_key(uri.path)
-        else
-          raise ConfigurationError, "unsupported URI scheme: " + location
-        end
-      end
-    rescue URI::InvalidURIError => e
-      raise ConfigurationError, e.message
+      load_private_key(location) if location # then we must be an authority; load our key
     end
 
     # Load a single authority's public key, or an entire directory full of public keys. Assume
@@ -117,7 +99,7 @@ module GlobalSession
         # ignore private keys (which legacy config allowed to coexist with public keys)
         unless key.private?
           if @public_keys.has_key?(name)
-            raise ConfigurationError, "Already loaded public key for #{name}"
+            raise ConfigurationError, "Duplicate public key for authority: #{name}"
           else
             @public_keys[name] = key
           end
