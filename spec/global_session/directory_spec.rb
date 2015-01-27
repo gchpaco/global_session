@@ -4,11 +4,11 @@ describe GlobalSession::Directory do
   include SpecHelper
 
   before(:all) do
-    @keystore = KeyFactory.new
+    @key_factory = KeyFactory.new
   end
 
   after(:all) do
-    @keystore.destroy
+    @key_factory.destroy
   end  
 
   before(:each) do
@@ -20,7 +20,7 @@ describe GlobalSession::Directory do
   end
 
   after(:each) do
-    @keystore.reset
+    @key_factory.reset
     reset_mock_config
   end
 
@@ -33,26 +33,27 @@ describe GlobalSession::Directory do
 
       context 'and a keystore with no private keys' do
         it 'raises ConfigurationError' do
-          @keystore.create(@authority_name, false)
+          @key_factory.create(@authority_name, false)
           lambda {
-            GlobalSession::Directory.new(mock_config, @keystore.dir)
+            GlobalSession::Directory.new(mock_config, @key_factory.dir)
           }.should raise_error(GlobalSession::ConfigurationError)
         end
       end
 
       context 'and a keystore with an incorrectly-named private key' do
         it 'raises ConfigurationError' do
-          @keystore.create('wrong_name', true)
+          @key_factory.create('wrong_name', true)
           lambda {
-            GlobalSession::Directory.new(mock_config, @keystore.dir)
+            $tony = true
+            GlobalSession::Directory.new(mock_config, @key_factory.dir)
           }.should raise_error(GlobalSession::ConfigurationError)
         end
       end
 
       context 'and a keystore with a correctly-named private key' do
         it 'succeeds' do
-          @keystore.create(@authority_name, true)
-          GlobalSession::Directory.should === GlobalSession::Directory.new(mock_config, @keystore.dir)
+          @key_factory.create(@authority_name, true)
+          GlobalSession::Directory.should === GlobalSession::Directory.new(mock_config, @key_factory.dir)
         end
       end
     end
@@ -60,7 +61,7 @@ describe GlobalSession::Directory do
     context 'given a configuration that does not specify a local authority' do
       it 'raises ConfigurationError' do
         lambda {
-          GlobalSession::Directory.new(mock_config, @keystore.dir)
+          GlobalSession::Directory.new(mock_config, @key_factory.dir)
         }.should raise_error(GlobalSession::ConfigurationError)
       end
     end
@@ -70,8 +71,8 @@ describe GlobalSession::Directory do
     before(:each) do
       @authority_name = "authority#{rand(2**16)}"
       mock_config('test/authority', @authority_name)
-      @keystore.create(@authority_name, true)
-      @directory = GlobalSession::Directory.new(mock_config, @keystore.dir)
+      @key_factory.create(@authority_name, true)
+      @directory = GlobalSession::Directory.new(mock_config, @key_factory.dir)
     end
 
     context 'given a configuration that does not specify cookie/version' do

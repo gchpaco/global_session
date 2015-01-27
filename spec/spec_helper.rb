@@ -6,34 +6,45 @@ require 'tempfile'
 require 'flexmock'
 require 'global_session'
 
+begin
+  if RUBY_VERSION =~ /^1\.8/
+    require 'ruby-debug'
+  else
+    require 'pry'
+    require 'pry-byebug'
+  end
+rescue LoadError
+  # no-op; debugger is purposefully omitted from some environments
+end
+
 Spec::Runner.configure do |config|
   config.mock_with :flexmock
 end
 
 class KeyFactory
   def initialize()
-    @keystore = File.join( Dir.tmpdir, "#{Process.pid}_#{rand(2**32)}" )
-    FileUtils.mkdir_p(@keystore)
+    @key_factory = File.join( Dir.tmpdir, "#{Process.pid}_#{rand(2**32)}" )
+    FileUtils.mkdir_p(@key_factory)
   end
 
   def dir
-    @keystore
+    @key_factory
   end
 
   def create(name, write_private)
     new_key     = OpenSSL::PKey::RSA.generate(1024)
     new_public  = new_key.public_key.to_pem
     new_private = new_key.to_pem
-    File.open(File.join(@keystore, "#{name}.pub"), 'w') { |f| f.puts new_public }
-    File.open(File.join(@keystore, "#{name}.key"), 'w') { |f| f.puts new_key } if write_private
+    File.open(File.join(@key_factory, "#{name}.pub"), 'w') { |f| f.puts new_public }
+    File.open(File.join(@key_factory, "#{name}.key"), 'w') { |f| f.puts new_key } if write_private
   end
 
   def reset()
-    FileUtils.rm_rf(File.join(@keystore, '*'))
+    FileUtils.rm_rf(File.join(@key_factory, '*'))
   end
 
   def destroy()
-    FileUtils.rm_rf(@keystore)
+    FileUtils.rm_rf(@key_factory)
   end
 end
 
@@ -45,6 +56,8 @@ module SpecHelper
     @mock_config ||= GlobalSession::Configuration.allocate
     @mock_config.instance_variable_set(:@environment, 'test')
     hash = @mock_config.instance_variable_get(:@config) || {}
+    hash['common'] ||= {}
+    hash['test'] ||= {}
     @mock_config.instance_variable_set(:@config, hash)
 
     if(path || value)
@@ -53,7 +66,7 @@ module SpecHelper
       last_key   = path.last
       first_keys.each do |key|
         hash[key] ||= {}
-        hash = hash[key]
+        hash = hash[key] if hash[key].is_a?(Hash)
       end
       hash[last_key] = value
     end

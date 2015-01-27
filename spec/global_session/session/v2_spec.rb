@@ -8,7 +8,7 @@ describe GlobalSession::Session::V2 do
     before(:each) do
       mock_config('test/trust', ['authority1'])
       mock_config('test/authority', 'authority1')
-      @directory        = GlobalSession::Directory.new(mock_config, @keystore.dir)
+      @directory        = GlobalSession::Directory.new(mock_config, @key_factory.dir)
       @original_session = described_class.new(@directory)
       @cookie           = @original_session.to_s
     end

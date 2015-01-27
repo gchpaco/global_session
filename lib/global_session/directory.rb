@@ -22,7 +22,7 @@
 require 'set'
 
 module GlobalSession
-  # The global session directory, which provides some lookup and decision services
+  # The global session directory, which provides lookup and decision services
   # to instances of Session.
   #
   # The default implementation is simplistic, but should be suitable for most applications.
@@ -31,28 +31,23 @@ module GlobalSession
   # setting to specify the class name of your implementation:  
   #
   #     common:
-  #       directory: MyCoolDirectory
+  #       directory:
+  #         class: MyCoolDirectory
   #
+  # == Key Management
   #
-  # === The Authority Keystore
-  # Directory uses a filesystem directory as a backing store for RSA
-  # public keys of global session authorities. The directory should
-  # contain one or more +*.pub+ files containing OpenSSH-format public
-  # RSA keys. The name of the pub file determines the name of the
-  # authority it represents.
+  # All key-related functionality has been delegated to the Keystore class as of
+  # v3.1. Directory retains its key management hooks for downrev compatibility,
+  # but mostly they are stubs for Keystore functionality.
   #
-  # === The Local Authority
-  # Directory will infer the name of the local authority (if any) by
-  # looking for a private-key file in the keystore. If a +*.key+ file
-  # is found, then its name is taken to be the name of the local
-  # authority and all GlobalSessions created will be signed by that
-  # authority's private key.
-  #
-  # If more than one key file is found, Directory will raise an error
-  # at initialization time.
+  # For more information about key mangement, please refer to the Keystore class.
   #
   class Directory
-    attr_reader :configuration, :authorities, :private_key
+    # @return [Configuration] shared configuration object
+    attr_reader :configuration
+
+    # @return [Keystore] asymmetric crypto keys for signing authorities
+    attr_reader :keystore
 
     # @return a representation of the object suitable for printing to the console
     def inspect
@@ -61,31 +56,36 @@ module GlobalSession
 
     # Create a new Directory.
     #
-    # === Parameters
-    # keystore_directory(String):: Absolute path to authority keystore
-    #
-    # === Raise
-    # ConfigurationError:: if too many or too few keys are found, or if *.key/*.pub files are malformatted
-    def initialize(configuration, keystore_directory)
+    # @param [Configuration] shared configuration
+    # @param optional [String] keystore_directory (DEPRECATED) if present, directory where keys can be found
+    # @raise [ConfigurationError] if too many or too few keys are found, or if *.key/*.pub files are malformatted
+    def initialize(configuration, keystore_directory=nil)
       @configuration = configuration
-      certs = Dir[File.join(keystore_directory, '*.pub')]
-      keys  = Dir[File.join(keystore_directory, '*.key')]
-
       @authorities = {}
-      certs.each do |cert_file|
-        basename = File.basename(cert_file)
-        authority = basename[0...(basename.rindex('.'))] #chop trailing .ext
-        @authorities[authority] = OpenSSL::PKey::RSA.new(File.read(cert_file))
-        raise ConfigurationError, "Expected #{basename} to contain an RSA public key" unless @authorities[authority].public?
+
+      # Propagate a deprecated parameter
+      # @deprecated remove for v4.0
+      if keystore_directory.is_a?(String)
+        all_files = Dir.glob(File.join(keystore_directory, '*'))
+        public_keys = all_files.select { |kf| kf =~ /\.pub$/ }
+        raise ConfigurationError, "No public keys (*.pub) found in #{keystore_directory}" if public_keys.empty?
+
+        @configuration['common'] ||= {}
+        @configuration['common']['keystore'] ||= {}
+        @configuration['common']['keystore']['public'] = [keystore_directory]
+
+        # Propagate a deprecated configuration option
+        # @deprecated remove for v4.0
+        if (private_key = @configuration['authority'])
+          key_file = all_files.detect { |kf| kf =~ /#{private_key}\.key$/ }
+          raise ConfigurationError, "Key file #{private_key}.key not found in #{keystore_directory}" unless key_file
+          @configuration['common'] ||= {}
+          @configuration['common']['keystore'] ||= {}
+          @configuration['common']['keystore']['private'] = key_file
+        end
       end
 
-      if local_authority_name
-        key_file = keys.detect { |kf| kf =~ /#{local_authority_name}.key$/ }
-        raise ConfigurationError, "Key file #{local_authority_name}.key not found" unless key_file        
-        @private_key  = OpenSSL::PKey::RSA.new(File.read(key_file))
-        raise ConfigurationError, "Expected #{key_file} to contain an RSA private key" unless @private_key.private?
-      end
-
+      @keystore = Keystore.new(configuration)
       @invalid_sessions = Set.new
     end
 
@@ -95,6 +95,7 @@ module GlobalSession
     # DEPRECATED: If a cookie is provided, load an existing session from its
     # serialized form. You should use #load_session for this instead.
     #
+    # @deprecated will be removed in GlobalSession v4; please use #load_session instead
     # @see load_session
     #
     # === Parameters
@@ -146,12 +147,33 @@ module GlobalSession
       Session.new(self, cookie)
     end
 
+    # @return [Hash] map of String authority-names to OpenSSL::PKey public-keys
+    # @deprecated will be removed in GlobalSession v4; please use Keystore instead
+    # @see GlobalSession::Keystore
+    def authorities
+      @keystore.public_keys
+    end
+
+    # Determine the private key associated with this directory, to be used for signing.
+    #
+    # @return [nil,OpenSSL::PKey] local authority key if we are an authority, else nil
+    # @deprecated will be removed in GlobalSession v4; please use Keystore instead
+    # @see GlobalSession::Keystore
+    def private_key
+      @keystore.private_key || @private_key
+    end
+
+    # Determine the authority name associated with this directory's private session-signing key.
+    #
+    # @deprecated will be removed in GlobalSession v4; please use Keystore instead
+    # @see GlobalSession::Keystore
     def local_authority_name
-      @configuration['authority']
+      @keystore.private_key_name || @private_key_name
     end
     
-    # Determine whether this system trusts a particular authority based on
-    # the trust settings specified in Configuration.
+    # Determine whether this system trusts a particular named authority based on
+    # the settings specified in Configuration and/or the presence of public key
+    # files on disk.
     #
     # === Parameters
     # authority(String):: The name of the authority
@@ -159,7 +181,13 @@ module GlobalSession
     # === Return
     # trusted(true|false):: whether the local system trusts sessions signed by the specified authority
     def trusted_authority?(authority)
-      @configuration['trust'].include?(authority)
+      if @configuration.has_key?('trust')
+        # Explicit trust in just the authorities specified in the configuration
+        @configuration['trust'].include?(authority)
+      else
+        # Implicit trust in any public key we found on disk
+        @keystore.public_keys.keys.include?(authority)
+      end
     end
 
     # Determine whether the given session UUID is valid. The default implementation only considers
@@ -190,5 +218,5 @@ module GlobalSession
     def report_invalid_session(uuid, expired_at)
       @invalid_sessions << uuid
     end
-  end  
+  end
 end

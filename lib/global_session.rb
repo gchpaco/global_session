@@ -87,6 +87,7 @@ require 'openssl'
 
 #Require the core suite of GlobalSession classes and modules
 require 'global_session/configuration'
+require 'global_session/keystore'
 require 'global_session/directory'
 require 'global_session/encoding'
 require 'global_session/session'

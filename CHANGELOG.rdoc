@@ -1,4 +1,22 @@
-== 2.0
+== 3.1 (2015-01-27)
+
+Split Directory class into Directory & Keystore, retaining some backward-compatibility shims
+inside Directory. In v4, these shims will be removed and all key management concerns will be
+handled by Keystore; the Directory class will be limited to session creation, renewal, and
+validity checking.
+
+== 3.0 (2013-10-03)
+
+The format of the global session cookie has been reinvented again! It once again uses JSON
+(because msgpack was not widely supported in other languages/OSes) but retains the compact
+array encoding introduced in v2.
+
+The cryptographic signature scheme has been changed for better compatibility; we now use
+PKCS1 v1.5 sign and verify operations instead of "raw" RSA. v2 and v1 sessions are fully
+supported for read/write, but any session created with the v3 gem will use the v3 crypto
+scheme.
+
+== 2.0 (2012-11-06)
 
 The format of the global session cookie has been reinvented; it now uses msgpack and delegates
 all crypto to RightSupport::Crypto::SignedHash. Together with a few other optimizations, the
@@ -11,16 +29,15 @@ The "integrated" feature is no longer supported for the Rails integration layer;
 attributes must always be accessed separately from local session attributes, through the
 #global_session reader method that is mixed into ActionController::Base.
 
-== 1.0
+== 1.0 (2011-01-01)
 
-Mostly interface-compatible with 0.9.
+General Availability release. Mostly interface-compatible with 0.9.
 
-== 0.9
+== 0.9 (2010-12-07)
 
 Rack middleware implementation is feature-complete and has major spec coverage. Rails integration
 is untested and may contain bugs.
 
 === 0.9.0 (2010-12-22)
 
-* Initial commit ported from 'rack' branch of old has_global_session project
-
+Initial commit ported from 'rack' branch of old has_global_session project

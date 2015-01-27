@@ -4,13 +4,13 @@ shared_examples_for 'all subclasses of Session::Abstract' do
   include SpecHelper
 
   before(:all) do
-    @keystore = KeyFactory.new
-    @keystore.create('authority1', true)
-    @keystore.create('authority2', false)
+    @key_factory = KeyFactory.new
+    @key_factory.create('authority1', true)
+    @key_factory.create('authority2', false)
   end
 
   after(:all) do
-    @keystore.destroy
+    @key_factory.destroy
   end
 
   before(:each) do
@@ -20,7 +20,7 @@ shared_examples_for 'all subclasses of Session::Abstract' do
   end
 
   after(:each) do
-    @keystore.reset
+    @key_factory.reset
     reset_mock_config
   end
 
@@ -28,7 +28,7 @@ shared_examples_for 'all subclasses of Session::Abstract' do
     before(:each) do
       mock_config('test/trust', ['authority1'])
       mock_config('test/authority', 'authority1')
-      @directory        = GlobalSession::Directory.new(mock_config, @keystore.dir)
+      @directory        = GlobalSession::Directory.new(mock_config, @key_factory.dir)
       @original_session = described_class.new(@directory)
       @cookie           = @original_session.to_s
     end
@@ -63,7 +63,7 @@ shared_examples_for 'all subclasses of Session::Abstract' do
       before do
         mock_config('test/trust', ['authority1'])
         mock_config('test/authority', 'authority1')
-        @directory2 = GlobalSession::Directory.new(mock_config, @keystore.dir)
+        @directory2 = GlobalSession::Directory.new(mock_config, @key_factory.dir)
         @cookie = described_class.new(@directory2).to_s
         mock_config('test/trust', ['authority2'])
         mock_config('test/authority', nil)
@@ -121,7 +121,7 @@ shared_examples_for 'all subclasses of Session::Abstract' do
     before(:each) do
       mock_config('test/trust', ['authority1'])
       mock_config('test/authority', 'authority1')
-      @directory = GlobalSession::Directory.new(mock_config, @keystore.dir)
+      @directory = GlobalSession::Directory.new(mock_config, @key_factory.dir)
       @session   = described_class.new(@directory)
     end
 

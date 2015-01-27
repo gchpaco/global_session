@@ -4,13 +4,13 @@ describe GlobalSession::Session do
   include SpecHelper
 
   before(:all) do
-    @keystore = KeyFactory.new
-    @keystore.create('authority1', true)
-    @keystore.create('authority2', false)
+    @key_factory = KeyFactory.new
+    @key_factory.create('authority1', true)
+    @key_factory.create('authority2', false)
   end
 
   after(:all) do
-    @keystore.destroy
+    @key_factory.destroy
   end
 
   before(:each) do
@@ -19,7 +19,7 @@ describe GlobalSession::Session do
     mock_config('common/attributes/signed', ['user'])
     mock_config('common/attributes/insecure', ['favorite_color'])
     mock_config('test/timeout', '60')
-    @directory        = GlobalSession::Directory.new(mock_config, @keystore.dir)
+    @directory        = GlobalSession::Directory.new(mock_config, @key_factory.dir)
   end
 
   [GlobalSession::Session::V1,GlobalSession::Session::V2,GlobalSession::Session::V3].each do |k|

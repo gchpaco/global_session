@@ -5,27 +5,31 @@ describe GlobalSession::Session::Abstract do
   include SpecHelper
 
   before(:all) do
-    @keystore = KeyFactory.new
-    @keystore.create('authority1', true)
-    @keystore.create('authority2', false)
+    @key_factory = KeyFactory.new
+    @key_factory.create('authority1', true)
+    @key_factory.create('authority2', false)
   end
 
   after(:all) do
-    @keystore.destroy
+    @key_factory.destroy
   end
 
   # Abstract#initialize can't be invoked directly, so we test its subclasses
-  # instead.
-  GlobalSession::Session::Abstract.subclasses.each do |klass|
+  # instead. We do the reflection ourselves to avoid relying on ActiveSupport (Class#subclasses)
+  descendants = []
+  ObjectSpace.each_object(Class) do |k|
+    descendants.unshift k if k < GlobalSession::Session::Abstract
+  end
+  descendants.each do |klass|
     context "given a valid serialized #{klass}" do
-      let(:subclass) { klass.to_const }
+      let(:subclass) { klass }
       before(:each) do
         mock_config('test/trust', ['authority1'])
         mock_config('test/authority', 'authority1')
         mock_config('test/timeout', 60)
         mock_config('test/attributes/signed', ['user'])
         mock_config('test/attributes/unsigned', ['account'])
-        @directory = GlobalSession::Directory.new(mock_config, @keystore.dir)
+        @directory = GlobalSession::Directory.new(mock_config, @key_factory.dir)
         @session = subclass.new(@directory)
       end
 

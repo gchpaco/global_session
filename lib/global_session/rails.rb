@@ -47,6 +47,9 @@ module GlobalSession
 
       # Single Directory object used by entire Rails app
       attr_accessor :directory
+
+      # Single Keystore object used by entire Rails app
+      attr_accessor :keystore
     end
 
     def self.activate(rails_config, &block)
@@ -68,6 +71,7 @@ module GlobalSession
 
       authorities_dir = File.join(::Rails.root, 'config', 'authorities')
       self.directory = dir_klass.new(self.configuration, authorities_dir)
+      self.keystore = self.directory.keystore
 
       # Add our middleware to the stack.
       rails_config.middleware.insert_before(ActionController::Base.session_store, ::Rack::Cookies)

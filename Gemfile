@@ -2,20 +2,25 @@ source 'https://rubygems.org'
 
 gem 'json', '~> 1.4'
 gem 'rack-contrib', '~> 1.0'
-gem 'right_support', ['>= 2.8.2', '< 3.0']
+gem 'right_support', ['>= 2.8.2', '< 4.0']
 gem 'simple_uuid', '>= 0.2.0'
 
-group :development do
+group :test do
   gem 'cucumber', '~> 1.0'
-  gem 'debugger', '~> 1.5',
-      :platforms => :ruby_19
   gem 'flexmock', '~> 0.8'
   gem 'httpclient'
-  gem 'jeweler', '~> 1.8.3'
   gem 'msgpack', '~> 0.4'
   gem 'rake', '~> 0.8'
-  gem 'right_develop', '~> 1.2'
+  gem 'right_develop', '~> 3.1'
   gem 'rspec', '~> 1.3'
+end
+
+group :development do
   gem 'ruby-debug', '~> 0.10',
-    :platforms => :ruby_18
+      :platforms => :ruby_18
+  gem 'pry', '~> 0.10',
+      :platforms => [:ruby_19, :ruby_20, :ruby_21]
+  gem 'pry-byebug', '~> 2.0',
+      :platforms => [:ruby_19, :ruby_20, :ruby_21]
+  gem 'jeweler', '~> 1.8.3'
 end

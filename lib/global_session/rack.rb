@@ -29,61 +29,84 @@ module GlobalSession
     class Middleware
       LOCAL_SESSION_KEY = "rack.session".freeze
 
-      # Make a new global session.
+      # @return [GlobalSession::Configuration]
+      attr_accessor :configuration
+
+      # @return [GlobalSession::Directory]
+      attr_accessor :directory
+
+      # Make a new global session middleware.
       #
       # The optional block here controls an alternate ticket retrieval
       # method.  If no ticket is stored in the cookie jar, this
       # function is called.  If it returns a non-nil value, that value
       # is the ticket.
       #
-      # === Parameters
-      # app(Rack client): application to run
-      # configuration(String or Configuration): global_session configuration.
-      #                                         If a string, is interpreted as a
-      #                                         filename to load the config from.
-      # directory(String or Directory):         Directory object that provides
-      #                                         trust services to the global
-      #                                         session implementation. If a
-      #                                         string, is interpreted as a
-      #                                         filesystem directory containing
-      #                                         the public and private keys of
-      #                                         authorities, from which default
-      #                                         trust services will be initialized.
+      # @param [Configuration] configuration
+      # @param optional [String,Directory] directory the directory class name (DEPRECATED) or an actual instance of Directory
       #
-      # block: optional alternate ticket retrieval function
-      def initialize(app, configuration, directory, &block)
+      # @yield if a block is provided, yields to the block to fetch session data from request state
+      # @yieldparam [Hash] env Rack request environment is passed as a yield parameter
+      def initialize(app, configuration, directory=nil, &block)
         @app = app
 
+        # Initialize shared configuration
+        # @deprecated require Configuration object in v4
         if configuration.instance_of?(String)
           @configuration = Configuration.new(configuration, ENV['RACK_ENV'] || 'development')
         else
           @configuration = configuration
         end
 
+        klass = nil
         begin
-          klass_name = @configuration['directory'] || 'GlobalSession::Directory'
+          # v0.9.0 - v3.0.4: class name is the value of the 'directory' key
+          klass_name = @configuration['directory']
 
-          #Constantize the type name that was given as a string
-          parts = klass_name.split('::')
-          namespace = Object
-          namespace = namespace.const_get(parts.shift.to_sym) until parts.empty?
-          directory_klass = namespace
+          case klass_name
+          when Hash
+            # v3.0.5 and beyond: class name is in 'class' subkey
+            klass_name = klass_name['class']
+          when NilClass
+            # the eternal default, if the class name is not provided
+            klass_name = 'GlobalSession::Directory'
+          end
+
+          if klass_name.is_a?(String)
+            # for apps
+            klass = klass_name.to_const
+          else
+            # for specs that need to directly inject a class/object
+            klass = klass_name
+          end
         rescue Exception => e
-          raise GlobalSession::ConfigurationError, "Invalid/unknown directory class name #{@configuration['directory']}"
+          raise GlobalSession::ConfigurationError,
+                "Invalid/unknown directory class name: #{klass_name.inspect}"
         end
 
-        if directory.instance_of?(String)
-          @directory = directory_klass.new(@configuration, directory)
-        else
+        # Initialize the directory
+        # @deprecated require Directory object in v4
+        if klass.is_a?(Class)
+          @directory = klass.new(@configuration, directory)
+        elsif klass.is_a?(Directory)
           @directory = directory
+        else
+          raise GlobalSession::ConfigurationError,
+                "Unsupported value for 'directory': expected Class or Directory, got #{klass.inspect}"
         end
+
+        # Initialize the keystore
+        @keystore = Keystore.new(@configuration)
 
         @cookie_retrieval = block
-        @cookie_name = @configuration['cookie']['name']
+        @cookie_name      = @configuration['cookie']['name']
       end
 
       # Rack request chain. Sets up the global session ticket from
       # the environment and passes it up the chain.
+      #
+      # @return [Array] valid Rack response tuple e.g. [200, 'hello world']
+      # @param [Hash] env Rack request environment
       def call(env)
         env['rack.cookies'] = {} unless env['rack.cookies']
 
@@ -121,11 +144,8 @@ module GlobalSession
       # header was found, also disable global session cookie update and renewal by setting the
       # corresponding keys of the Rack environment.
       #
-      # === Parameters
-      # env(Hash): Rack environment.
-      #
-      # === Return
-      # result(true,false):: Returns true if the environment was populated, false otherwise
+      # @return [Boolean] true if the environment was populated, false otherwise
+      # @param [Hash] env Rack request environment
       def read_authorization_header(env)
         if env.has_key? 'X-HTTP_AUTHORIZATION'
           # RFC2617 style (preferred by OAuth 2.0 spec)
@@ -138,9 +158,9 @@ module GlobalSession
         end
 
         if header_data && header_data.size == 2 && header_data.first.downcase == 'bearer'
-          env['global_session.req.renew'] = false
+          env['global_session.req.renew']  = false
           env['global_session.req.update'] = false
-          env['global_session'] = @directory.load_session(header_data.last)
+          env['global_session']            = @directory.load_session(header_data.last)
           true
         else
           false
@@ -149,11 +169,8 @@ module GlobalSession
 
       # Read a global session from HTTP cookies, if present.
       #
-      # === Parameters
-      # env(Hash): Rack environment.
-      #
-      # === Return
-      # result(true,false):: Returns true if the environment was populated, false otherwise
+      # @return [Boolean] true if the environment was populated, false otherwise
+      # @param [Hash] env Rack request environment
       def read_cookie(env)
         if @cookie_retrieval && (cookie = @cookie_retrieval.call(env))
           env['global_session'] = @directory.load_session(cookie)
@@ -169,11 +186,8 @@ module GlobalSession
       # Ensure that the Rack environment contains a global session object; create a session
       # if necessary.
       #
-      # === Parameters
-      # env(Hash): Rack environment.
-      #
-      # === Return
-      # true:: always returns true
+      # @return [true] always returns true
+      # @param [Hash] env Rack request environment
       def create_session(env)
         env['global_session'] ||= @directory.create_session
 
@@ -182,49 +196,53 @@ module GlobalSession
 
       # Renew the session ticket.
       #
-      # === Parameters
-      # env(Hash): Rack environment
+      # @return [true] always returns true
+      # @param [Hash] env Rack request environment
       def renew_cookie(env)
-        return unless @directory.local_authority_name
+        return unless @configuration['authority']
         return if env['global_session.req.renew'] == false
 
         if (renew = @configuration['renew']) && env['global_session'] &&
-            env['global_session'].expired_at < Time.at(Time.now.utc + 60 * renew.to_i)
+          env['global_session'].expired_at < Time.at(Time.now.utc + 60 * renew.to_i)
           env['global_session'].renew!
         end
+
+        true
       end
 
       # Update the cookie jar with the revised ticket.
       #
-      # === Parameters
-      # env(Hash): Rack environment
+      # @return [true] always returns true
+      # @param [Hash] env Rack request environment
       def update_cookie(env)
-        return unless @directory.local_authority_name
-        return if env['global_session.req.update'] == false
+        return true unless @configuration['authority']
+        return true if env['global_session.req.update'] == false
 
         session = env['global_session']
 
         if session
           unless session.valid?
             old_session = session
-            session = @directory.create_session
+            session     = @directory.create_session
             perform_invalidation_callbacks(env, old_session, session)
             env['global_session'] = session
           end
 
-          value = session.to_s
+          value   = session.to_s
           expires = @configuration['ephemeral'] ? nil : session.expired_at
           unless env['rack.cookies'][@cookie_name] == value
             env['rack.cookies'][@cookie_name] =
-                {:value => value,
-                 :domain => cookie_domain(env),
-                 :expires => expires,
-                 :httponly=>true}
+              {:value    => value,
+               :domain   => cookie_domain(env),
+               :expires  => expires,
+               :httponly => true}
           end
         else
           # write an empty cookie
           wipe_cookie(env)
         end
+
+        true
       rescue Exception => e
         wipe_cookie(env)
         raise e
@@ -232,25 +250,27 @@ module GlobalSession
 
       # Delete the global session cookie from the cookie jar.
       #
-      # === Parameters
-      # env(Hash): Rack environment
+      # @return [true] always returns true
+      # @param [Hash] env Rack request environment
       def wipe_cookie(env)
-        return unless @directory.local_authority_name
+        return unless @configuration['authority']
         return if env['global_session.req.update'] == false
 
-        env['rack.cookies'][@cookie_name] = {:value => nil,
-                                             :domain => cookie_domain(env),
+        env['rack.cookies'][@cookie_name] = {:value   => nil,
+                                             :domain  => cookie_domain(env),
                                              :expires => Time.at(0)}
+
+        true
       end
 
       # Handle exceptions that occur during app invocation. This will either save the error
       # in the Rack environment or raise it, depending on the type of error. The error may
       # also be logged.
       #
-      # === Parameters
-      # activity(String): name of activity in which error happened
-      # env(Hash): Rack environment
-      # e(Exception): error that happened
+      # @return [true] always returns true
+      # @param [String] activity name of activity during which the error happened
+      # @param [Hash] env Rack request environment
+      # @param [Exception] e error that happened
       def handle_error(activity, env, e)
         if env['rack.logger']
           msg = "#{e.class} while #{activity}: #{e}"
@@ -264,17 +284,20 @@ module GlobalSession
         elsif e.is_a? ConfigurationError
           env['global_session.error'] = e
         else
+          # Don't intercept errors unless they're GlobalSession-related
           raise e
         end
+
+        true
       end
 
       # Perform callbacks to directory and/or local session
       # informing them that this session has been invalidated.
       #
-      # === Parameters
-      # env(Hash):: the rack environment
-      # old_session(GlobalSession):: the now-invalidated session
-      # new_session(GlobalSession):: the new session that will be sent to the client
+      # @return [true] always returns true
+      # @param [Hash] env Rack request environment
+      # @param [GlobalSession::Session] old_session now-invalidated session
+      # @param [GlobalSession::Session] new_session new session that will be sent to the client
       def perform_invalidation_callbacks(env, old_session, new_session)
         if (local_session = env[LOCAL_SESSION_KEY]) && local_session.respond_to?(:rename!)
           local_session.rename!(old_session, new_session)
@@ -287,16 +310,15 @@ module GlobalSession
       # in the configuration if one is found; otherwise, uses the SERVER_NAME from the request
       # but strips off the first component if the domain name contains more than two components.
       #
-      # === Parameters
-      # env(Hash):: the Rack environment hash
+      # @param [Hash] env Rack request environment
       def cookie_domain(env)
-        if @configuration['cookie'].key?('domain')
+        if @configuration['cookie'].has_key?('domain')
           # Use the explicitly provided domain name
           domain = @configuration['cookie']['domain']
         else
           # Use the server name, but strip off the most specific component
-          parts = env['SERVER_NAME'].split('.')
-          parts = parts[1..-1] if parts.length > 2
+          parts  = env['SERVER_NAME'].split('.')
+          parts  = parts[1..-1] if parts.length > 2
           domain = parts.join('.')
         end
 
