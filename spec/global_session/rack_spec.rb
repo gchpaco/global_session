@@ -277,6 +277,17 @@ describe GlobalSession::Rack::Middleware do
       @app.update_cookie(@env)
     end
 
+    context 'given the transport protocol is secure' do
+      before(:each) do
+        @env['rack.url_scheme'] = 'https'
+      end
+
+      it 'sets secure cookies' do
+        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:secure=>true))
+        @app.update_cookie(@env)
+      end
+    end
+
     it 'uses the domain name associated with the HTTP request' do
       @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>'foobar.com'))
       @app.update_cookie(@env)
