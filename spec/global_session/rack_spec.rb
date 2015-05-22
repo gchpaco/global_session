@@ -271,11 +271,11 @@ describe GlobalSession::Rack::Middleware do
 
     context 'when the configuration specifies a cookie domain' do
       before(:each) do
-        mock_config('test/cookie/domain', 'foobar.com')
+        mock_config('test/cookie/domain', 'barfoo.com')
       end
 
-      it 'sets cookies with the domain specified in the configuration' do
-        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>'foobar.com'))
+      it 'uses the domain name specified in the configuration' do
+        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>'barfoo.com'))
         @app.update_cookie(@env)
       end
     end
