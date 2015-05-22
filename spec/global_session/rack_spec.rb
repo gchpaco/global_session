@@ -253,7 +253,7 @@ describe GlobalSession::Rack::Middleware do
     
     context 'when the local system is not an authority' do
       before(:each) do
-        mock_config('test/authority', nil)
+        flexmock(@directory.keystore).should_receive(:private_key_name).and_return(nil)
       end
 
       it 'does not wipe the cookie' do
