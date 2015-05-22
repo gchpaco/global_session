@@ -264,6 +264,19 @@ describe GlobalSession::Rack::Middleware do
   end
 
   context :update_cookie do
+    before(:each) do
+      @session = flexmock('global session',
+                          :valid? => true,
+                          :to_s => 'serialized session',
+                          :expired_at => Time.at(Time.now.to_i + 60))
+      @env['global_session'] = @session
+    end
+
+    it 'sets HTTP-only cookies' do
+      @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:httponly=>true))
+      @app.update_cookie(@env)
+    end
+
     it 'uses the domain name associated with the HTTP request' do
       @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>'foobar.com'))
       @app.update_cookie(@env)
