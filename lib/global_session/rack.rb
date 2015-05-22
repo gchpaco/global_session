@@ -216,7 +216,7 @@ module GlobalSession
       # @return [true] always returns true
       # @param [Hash] env Rack request environment
       def update_cookie(env)
-        return true unless @configuration['authority']
+        return true unless @directory.keystore.private_key_name
         return true if env['global_session.req.update'] == false
 
         session = env['global_session']
