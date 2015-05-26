@@ -253,7 +253,7 @@ describe GlobalSession::Rack::Middleware do
     
     context 'when the local system is not an authority' do
       before(:each) do
-        mock_config('test/authority', nil)
+        flexmock(@directory.keystore).should_receive(:private_key_name).and_return(nil)
       end
 
       it 'does not wipe the cookie' do
@@ -264,6 +264,30 @@ describe GlobalSession::Rack::Middleware do
   end
 
   context :update_cookie do
+    before(:each) do
+      @session = flexmock('global session',
+                          :valid? => true,
+                          :to_s => 'serialized session',
+                          :expired_at => Time.at(Time.now.to_i + 60))
+      @env['global_session'] = @session
+    end
+
+    it 'sets HTTP-only cookies' do
+      @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:httponly=>true))
+      @app.update_cookie(@env)
+    end
+
+    context 'given the transport protocol is secure' do
+      before(:each) do
+        @env['rack.url_scheme'] = 'https'
+      end
+
+      it 'sets secure cookies' do
+        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:secure=>true))
+        @app.update_cookie(@env)
+      end
+    end
+
     it 'uses the domain name associated with the HTTP request' do
       @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>'foobar.com'))
       @app.update_cookie(@env)
@@ -271,11 +295,11 @@ describe GlobalSession::Rack::Middleware do
 
     context 'when the configuration specifies a cookie domain' do
       before(:each) do
-        mock_config('test/cookie/domain', 'foobar.com')
+        mock_config('test/cookie/domain', 'barfoo.com')
       end
 
-      it 'sets cookies with the domain specified in the configuration' do
-        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>'foobar.com'))
+      it 'uses the domain name specified in the configuration' do
+        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>'barfoo.com'))
         @app.update_cookie(@env)
       end
     end
@@ -293,7 +317,7 @@ describe GlobalSession::Rack::Middleware do
 
     context 'when the local system is not an authority' do
       before(:each) do
-        mock_config('test/authority', nil)
+        flexmock(@directory.keystore).should_receive(:private_key_name).and_return(false)
         @inner_app.should_receive(:call)
       end
 

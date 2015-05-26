@@ -43,7 +43,7 @@ module GlobalSession
       # is the ticket.
       #
       # @param [Configuration] configuration
-      # @param optional [String,Directory] directory the directory class name (DEPRECATED) or an actual instance of Directory
+      # @param optional [String,Directory] directory the disk-directory in which keys live (DEPRECATED), or an actual instance of Directory
       #
       # @yield if a block is provided, yields to the block to fetch session data from request state
       # @yieldparam [Hash] env Rack request environment is passed as a yield parameter
@@ -84,15 +84,16 @@ module GlobalSession
                 "Invalid/unknown directory class name: #{klass_name.inspect}"
         end
 
-        # Initialize the directory
-        # @deprecated require Directory object in v4
-        if klass.is_a?(Class)
-          @directory = klass.new(@configuration, directory)
-        elsif klass.is_a?(Directory)
+        # Initialize the directory object
+        if directory.is_a?(Directory)
+          # In v4-style initialization, the directory is always passed in
           @directory = directory
+        elsif klass.is_a?(Class)
+          # @deprecated v3-style initialization where the config file names the directory class
+          @directory = klass.new(@configuration, directory)
         else
           raise GlobalSession::ConfigurationError,
-                "Unsupported value for 'directory': expected Class or Directory, got #{klass.inspect}"
+                "Cannot determine directory class/instance; method parameter is a #{directory.class.name} and configuration parameter is #{klass.class.name}"
         end
 
         # Initialize the keystore
@@ -215,7 +216,7 @@ module GlobalSession
       # @return [true] always returns true
       # @param [Hash] env Rack request environment
       def update_cookie(env)
-        return true unless @configuration['authority']
+        return true unless @directory.keystore.private_key_name
         return true if env['global_session.req.update'] == false
 
         session = env['global_session']
@@ -232,10 +233,13 @@ module GlobalSession
           expires = @configuration['ephemeral'] ? nil : session.expired_at
           unless env['rack.cookies'][@cookie_name] == value
             env['rack.cookies'][@cookie_name] =
-              {:value    => value,
-               :domain   => cookie_domain(env),
-               :expires  => expires,
-               :httponly => true}
+              {
+                :value    => value,
+                :domain   => cookie_domain(env),
+                :expires  => expires,
+                :httponly => true,
+                :secure   => (env['rack.url_scheme'] == 'https'),
+              }
           end
         else
           # write an empty cookie
@@ -253,7 +257,7 @@ module GlobalSession
       # @return [true] always returns true
       # @param [Hash] env Rack request environment
       def wipe_cookie(env)
-        return unless @configuration['authority']
+        return unless @directory.keystore.private_key_name
         return if env['global_session.req.update'] == false
 
         env['rack.cookies'][@cookie_name] = {:value   => nil,

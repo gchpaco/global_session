@@ -68,7 +68,7 @@ Install the GlobalSession middleware into your Rack stack; pass a config and a d
 object to its initializer. For instance, in config.ru:
 
     configuration = GlobalSession::Configuration.new('path/to/config.yml', RACK_ENV)
-    directory = GlobalSession::Directory.new(configuration, 'path/to/keystore')
+    directory = GlobalSession::Directory.new(configuration)
     use ::GlobalSession::Rack::Middleware, configuration, directory
 
 = Global Session Contents
@@ -81,7 +81,7 @@ operation). If your app uses the cookie, GlobalSession will take care of
 updating the cookie whenever session values change.
 
 Data-wise, the session is a JSON dictionary containing the following stuff:
-* session metadata (UUID, created-at, expires-at, signing-authority)
+* session metadata (UUID, created at, expires at, signing authority)
 * signed session attributes (e.g. the authenticated user ID)
 * insecure session attributes (e.g. the last-visited URL)
 * a cryptographic signature of the metadata and signed attributes
