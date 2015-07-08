@@ -232,13 +232,15 @@ module GlobalSession
           value   = session.to_s
           expires = @configuration['ephemeral'] ? nil : session.expired_at
           unless env['rack.cookies'][@cookie_name] == value
+            secure = (env['HTTP_X_FORWARDED_PROTO'] == 'https') ||
+                     (env['rack.url_scheme'] == 'https')
             env['rack.cookies'][@cookie_name] =
               {
                 :value    => value,
                 :domain   => cookie_domain(env),
                 :expires  => expires,
                 :httponly => true,
-                :secure   => (env['rack.url_scheme'] == 'https'),
+                :secure   => secure,
               }
           end
         else

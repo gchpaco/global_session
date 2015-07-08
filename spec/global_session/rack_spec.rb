@@ -277,13 +277,25 @@ describe GlobalSession::Rack::Middleware do
       @app.update_cookie(@env)
     end
 
-    context 'given the transport protocol is secure' do
-      before(:each) do
-        @env['rack.url_scheme'] = 'https'
+    context 'secure flag' do
+      it 'trusts X-Forwarded-Proto' do
+        @env['rack.url_scheme'] = 'http'
+        @env['HTTP_X_FORWARDED_PROTO'] = 'https'
+        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:secure=>true))
+        @app.update_cookie(@env)
+
+        @env['HTTP_X_FORWARDED_PROTO'] = 'http'
+        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:secure=>false))
+        @app.update_cookie(@env)
       end
 
-      it 'sets secure cookies' do
+      it 'falls back to rack.url_scheme' do
+        @env['rack.url_scheme'] = 'https'
         @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:secure=>true))
+        @app.update_cookie(@env)
+
+        @env['rack.url_scheme'] = 'http'
+        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:secure=>false))
         @app.update_cookie(@env)
       end
     end
