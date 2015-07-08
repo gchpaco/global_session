@@ -277,31 +277,62 @@ describe GlobalSession::Rack::Middleware do
       @app.update_cookie(@env)
     end
 
-    context 'given the transport protocol is secure' do
-      before(:each) do
-        @env['rack.url_scheme'] = 'https'
-      end
-
-      it 'sets secure cookies' do
+    context 'secure flag' do
+      it 'trusts X-Forwarded-Proto' do
+        @env['rack.url_scheme'] = 'http'
+        @env['HTTP_X_FORWARDED_PROTO'] = 'https'
         @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:secure=>true))
         @app.update_cookie(@env)
-      end
-    end
 
-    it 'uses the domain name associated with the HTTP request' do
-      @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>'foobar.com'))
-      @app.update_cookie(@env)
-    end
-
-    context 'when the configuration specifies a cookie domain' do
-      before(:each) do
-        mock_config('test/cookie/domain', 'barfoo.com')
-      end
-
-      it 'uses the domain name specified in the configuration' do
-        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>'barfoo.com'))
+        @env['HTTP_X_FORWARDED_PROTO'] = 'http'
+        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:secure=>false))
         @app.update_cookie(@env)
       end
+
+      it 'falls back to rack.url_scheme' do
+        @env['rack.url_scheme'] = 'https'
+        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:secure=>true))
+        @app.update_cookie(@env)
+
+        @env['rack.url_scheme'] = 'http'
+        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:secure=>false))
+        @app.update_cookie(@env)
+      end
+    end
+
+    context 'domain' do
+      context 'prefers the configuration value' do
+        before(:each) do
+          mock_config('test/cookie/domain', 'quux.barfoo.com')
+        end
+
+        it 'uses the domain name specified in the configuration' do
+          @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>'quux.barfoo.com'))
+          @app.update_cookie(@env)
+        end
+      end
+
+      it 'trusts X-Forwarded-Host' do
+        @env['HTTP_X_FORWARDED_HOST'] = 'baz.com'
+        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>'baz.com'))
+        @app.update_cookie(@env)
+      end
+
+      it 'falls back to SERVER_NAME' do
+        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>'foobar.com'))
+        @app.update_cookie(@env)
+      end
+
+      it 'copes with localhost, etc' do
+        @env['SERVER_NAME'] = 'localhost'
+        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>nil))
+        @app.update_cookie(@env)
+        @env['SERVER_NAME'] = '127.0.0.1'
+        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>nil))
+        @app.update_cookie(@env)
+      end
+
+      it 'copes with international SLDs (eg .co.jp)'
     end
 
     context 'when the app disables updates' do
