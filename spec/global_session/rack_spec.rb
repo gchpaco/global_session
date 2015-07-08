@@ -327,7 +327,12 @@ describe GlobalSession::Rack::Middleware do
         @env['SERVER_NAME'] = 'localhost'
         @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>nil))
         @app.update_cookie(@env)
+        @env['SERVER_NAME'] = '127.0.0.1'
+        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>nil))
+        @app.update_cookie(@env)
       end
+
+      it 'copes with international SLDs (eg .co.jp)'
     end
 
     context 'when the app disables updates' do

@@ -27,6 +27,8 @@ module GlobalSession
     # Global session middleware.  Note: this class relies on
     # Rack::Cookies being used higher up in the chain.
     class Middleware
+      NUMERIC_HOST      = /^[0-9.]+$/.freeze
+
       LOCAL_SESSION_KEY = "rack.session".freeze
 
       # @return [GlobalSession::Configuration]
@@ -318,15 +320,18 @@ module GlobalSession
       #
       # @param [Hash] env Rack request environment
       def cookie_domain(env)
+        name = env['HTTP_X_FORWARDED_HOST'] || env['SERVER_NAME']
+
         if @configuration['cookie'].has_key?('domain')
           # Use the explicitly provided domain name
           domain = @configuration['cookie']['domain']
+        elsif name =~ NUMERIC_HOST
+          # Don't set a domain if the browser requested an IP-based host
+          domain = nil
         else
-          name = env['HTTP_X_FORWARDED_HOST'] || env['SERVER_NAME']
-
           # Guess an appropriate domain for the cookie. Strip one level of
           # subdomain; leave SLDs unmolested; omit domain entirely for
-          # one-component domains (e.g. localhost)
+          # one-component domains (e.g. localhost).
           parts  = name.split('.')
           case parts.length
           when 0..1
