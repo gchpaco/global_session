@@ -322,10 +322,20 @@ module GlobalSession
           # Use the explicitly provided domain name
           domain = @configuration['cookie']['domain']
         else
-          # Use the server name, but strip off the most specific component
-          parts  = env['SERVER_NAME'].split('.')
-          parts  = parts[1..-1] if parts.length > 2
-          domain = parts.join('.')
+          name = env['HTTP_X_FORWARDED_HOST'] || env['SERVER_NAME']
+
+          # Guess an appropriate domain for the cookie. Strip one level of
+          # subdomain; leave SLDs unmolested; omit domain entirely for
+          # one-component domains (e.g. localhost)
+          parts  = name.split('.')
+          case parts.length
+          when 0..1
+            domain = nil
+          when 2
+            domain = parts.join('.')
+          else
+            domain = parts[1..-1].join('.')
+          end
         end
 
         domain

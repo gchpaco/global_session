@@ -300,18 +300,32 @@ describe GlobalSession::Rack::Middleware do
       end
     end
 
-    it 'uses the domain name associated with the HTTP request' do
-      @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>'foobar.com'))
-      @app.update_cookie(@env)
-    end
+    context 'domain' do
+      context 'prefers the configuration value' do
+        before(:each) do
+          mock_config('test/cookie/domain', 'quux.barfoo.com')
+        end
 
-    context 'when the configuration specifies a cookie domain' do
-      before(:each) do
-        mock_config('test/cookie/domain', 'barfoo.com')
+        it 'uses the domain name specified in the configuration' do
+          @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>'quux.barfoo.com'))
+          @app.update_cookie(@env)
+        end
       end
 
-      it 'uses the domain name specified in the configuration' do
-        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>'barfoo.com'))
+      it 'trusts X-Forwarded-Host' do
+        @env['HTTP_X_FORWARDED_HOST'] = 'baz.com'
+        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>'baz.com'))
+        @app.update_cookie(@env)
+      end
+
+      it 'falls back to SERVER_NAME' do
+        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>'foobar.com'))
+        @app.update_cookie(@env)
+      end
+
+      it 'copes with localhost, etc' do
+        @env['SERVER_NAME'] = 'localhost'
+        @cookie_jar.should_receive(:[]=).with('global_session_cookie', FlexMock.hsh(:domain=>nil))
         @app.update_cookie(@env)
       end
     end
