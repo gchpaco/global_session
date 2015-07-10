@@ -203,7 +203,7 @@ module GlobalSession
       # @param [Hash] env Rack request environment
       def renew_cookie(env)
         return true unless @directory.local_authority_name
-        return if env['global_session.req.renew'] == false
+        return true if env['global_session.req.renew'] == false
 
         if (renew = @configuration['renew']) && env['global_session'] &&
           env['global_session'].expired_at < Time.at(Time.now.utc + 60 * renew.to_i)
@@ -262,7 +262,7 @@ module GlobalSession
       # @param [Hash] env Rack request environment
       def wipe_cookie(env)
         return true unless @directory.local_authority_name
-        return if env['global_session.req.update'] == false
+        return true if env['global_session.req.update'] == false
 
         env['rack.cookies'][@cookie_name] = {:value   => nil,
                                              :domain  => cookie_domain(env),
