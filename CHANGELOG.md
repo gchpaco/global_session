@@ -1,4 +1,4 @@
-3.2.1 (pending)
+3.2.1 (2015-07-10)
 ---------------
 
 Fixed a bug with automatic cookie renewal; cookies were not being renewed unless
