@@ -58,8 +58,6 @@ describe GlobalSession::Rack::Middleware do
     mock_config('common/attributes/insecure', ['favorite_color'])
     mock_config('test/timeout', '60')
     mock_config('test/cookie/name', 'global_session_cookie')
-    mock_config('test/trust', ['authority1'])
-    mock_config('test/authority', 'authority1')
     mock_config('test/keystore/public', @key_factory.dir)
     mock_config('test/keystore/private', @key_factory.dir)
     @keystore = GlobalSession::Keystore.new(mock_config)
@@ -332,7 +330,7 @@ describe GlobalSession::Rack::Middleware do
         @app.update_cookie(@env)
       end
 
-      it 'copes with international SLDs (eg .co.jp)'
+      it 'copes with country-code SLDs (eg .co.jp)'
     end
 
     context 'when the app disables updates' do

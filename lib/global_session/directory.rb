@@ -168,7 +168,7 @@ module GlobalSession
     # @deprecated will be removed in GlobalSession v4; please use Keystore instead
     # @see GlobalSession::Keystore
     def local_authority_name
-      @keystore.private_key_name || @private_key_name
+      @keystore.private_key_name
     end
     
     # Determine whether this system trusts a particular named authority based on
