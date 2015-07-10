@@ -67,7 +67,7 @@ module GlobalSession::Session
               'tc' => @created_at.to_i, 'te' => @expired_at.to_i,
               'ds' => @signed}
 
-      if @signature && !@dirty_secure
+      if @signature && !dirty?
         #use cached signature unless we've changed secure state
         authority = @authority
       else
@@ -169,16 +169,6 @@ module GlobalSession::Session
       end
 
       return value
-    end
-
-    # Renews this global session, changing its expiry timestamp into the future.
-    # Causes a new signature will be computed when the session is next serialized.
-    #
-    # === Return
-    # true:: Always returns true
-    def renew!(expired_at=nil)
-      super(expired_at)
-      @dirty_secure = true
     end
 
     # Return the SHA1 hash of the most recently-computed RSA signature of this session.
