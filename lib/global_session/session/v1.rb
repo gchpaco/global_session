@@ -57,7 +57,7 @@ module GlobalSession::Session
     # === Return
     # cookie(String):: Base64Cookie-encoded, Zlib-compressed JSON-serialized global session
     def to_s
-      if @cookie && !@dirty_insecure && !@dirty_secure
+      if @cookie && !dirty?
         #use cached cookie if nothing has changed
         return @cookie
       end
@@ -84,6 +84,13 @@ module GlobalSession::Session
       json = GlobalSession::Encoding::JSON.dump(hash)
       zbin = Zlib::Deflate.deflate(json, Zlib::BEST_COMPRESSION)
       return GlobalSession::Encoding::Base64Cookie.dump(zbin)
+    end
+
+    # Determine whether any state has changed since the session was loaded.
+    #
+    # @return [Boolean] true if something has changed
+    def dirty?
+      !!(super || @dirty_secure || @dirty_insecure)
     end
 
     # Return the keys that are currently present in the global session.

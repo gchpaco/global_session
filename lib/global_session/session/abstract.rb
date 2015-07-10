@@ -44,7 +44,7 @@ module GlobalSession::Session
 
     # @return a Hash representation of the session with three subkeys: :metadata, :signed and :insecure
     # @raise nothing -- does not raise; returns empty hash if there is a failure
-    def to_hash
+    def to_h
       hash = {}
 
       md = {}
@@ -67,6 +67,9 @@ module GlobalSession::Session
       {}
     end
 
+    # @deprecated will be removed in GlobalSession v4; please use to_h instead
+    alias to_hash to_h
+
     # @return [true,false] true if this session was created in-process, false if it was initialized from a cookie
     def new_record?
       @cookie.nil?
@@ -79,6 +82,13 @@ module GlobalSession::Session
     # valid(true|false):: True if the session is valid, false otherwise
     def valid?
       @directory.valid_session?(@id, @expired_at)
+    end
+
+    # Determine whether any state has changed since the session was loaded.
+    #
+    # @return [Boolean] true if something has changed
+    def dirty?
+      !!(new_record? || @dirty_timestamps)
     end
 
     # Determine whether the global session schema allows a given key to be placed
@@ -104,7 +114,7 @@ module GlobalSession::Session
       @signed.has_key?(key) || @insecure.has_key?(key)
     end
 
-    alias :key? :has_key?
+    alias key? has_key?
 
     # Invalidate this session by reporting its UUID to the Directory.
     #
@@ -125,6 +135,7 @@ module GlobalSession::Session
       expired_at ||= Time.at(Time.now.utc + 60 * minutes)
       @expired_at = expired_at
       @created_at = Time.now.utc
+      @dirty_timestamps = true
     end
 
     private

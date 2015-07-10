@@ -37,6 +37,9 @@ module GlobalSession
       # @return [GlobalSession::Directory]
       attr_accessor :directory
 
+      # @return [GlobalSession::Keystore]
+      attr_accessor :keystore
+
       # Make a new global session middleware.
       #
       # The optional block here controls an alternate ticket retrieval
@@ -97,9 +100,6 @@ module GlobalSession
           raise GlobalSession::ConfigurationError,
                 "Cannot determine directory class/instance; method parameter is a #{directory.class.name} and configuration parameter is #{klass.class.name}"
         end
-
-        # Initialize the keystore
-        @keystore = Keystore.new(@configuration)
 
         @cookie_retrieval = block
         @cookie_name      = @configuration['cookie']['name']
@@ -202,8 +202,8 @@ module GlobalSession
       # @return [true] always returns true
       # @param [Hash] env Rack request environment
       def renew_cookie(env)
-        return unless @configuration['authority']
-        return if env['global_session.req.renew'] == false
+        return true unless @directory.local_authority_name
+        return true if env['global_session.req.renew'] == false
 
         if (renew = @configuration['renew']) && env['global_session'] &&
           env['global_session'].expired_at < Time.at(Time.now.utc + 60 * renew.to_i)
@@ -218,7 +218,7 @@ module GlobalSession
       # @return [true] always returns true
       # @param [Hash] env Rack request environment
       def update_cookie(env)
-        return true unless @directory.keystore.private_key_name
+        return true unless @directory.local_authority_name
         return true if env['global_session.req.update'] == false
 
         session = env['global_session']
@@ -261,8 +261,8 @@ module GlobalSession
       # @return [true] always returns true
       # @param [Hash] env Rack request environment
       def wipe_cookie(env)
-        return unless @directory.keystore.private_key_name
-        return if env['global_session.req.update'] == false
+        return true unless @directory.local_authority_name
+        return true if env['global_session.req.update'] == false
 
         env['rack.cookies'][@cookie_name] = {:value   => nil,
                                              :domain  => cookie_domain(env),
