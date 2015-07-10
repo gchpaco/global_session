@@ -115,7 +115,7 @@ module GlobalSession::Session
     # @return [String] a B64cookie-encoded JSON-serialized global session
     # @raise [GlobalSession::UnserializableType] if the attributes hash contains
     def to_s
-      if @cookie && !@dirty_insecure && !@dirty_secure
+      if @cookie && !dirty?
         #use cached cookie if nothing has changed
         return @cookie
       end
@@ -152,6 +152,13 @@ module GlobalSession::Session
       json = GlobalSession::Encoding::JSON.dump(array)
       bin = self.class.join_body(json, @signature)
       return GlobalSession::Encoding::Base64Cookie.dump(bin)
+    end
+
+    # Determine whether any state has changed since the session was loaded.
+    #
+    # @return [Boolean] true if something has changed
+    def dirty?
+      !!(super || @dirty_secure || @dirty_insecure)
     end
 
     # Return the keys that are currently present in the global session.

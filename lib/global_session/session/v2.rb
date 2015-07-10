@@ -58,7 +58,7 @@ module GlobalSession::Session
     # === Return
     # cookie(String):: Base64Cookie-encoded, Msgpack-serialized global session
     def to_s
-      if @cookie && !@dirty_insecure && !@dirty_secure
+      if @cookie && !dirty?
         #use cached cookie if nothing has changed
         return @cookie
       end
@@ -88,6 +88,13 @@ module GlobalSession::Session
       array = attribute_hash_to_array(hash)
       msgpack = GlobalSession::Encoding::Msgpack.dump(array)
       return GlobalSession::Encoding::Base64Cookie.dump(msgpack)
+    end
+
+    # Determine whether any state has changed since the session was loaded.
+    #
+    # @return [Boolean] true if something has changed
+    def dirty?
+      !!(super || @dirty_secure || @dirty_insecure)
     end
 
     # Return the keys that are currently present in the global session.
