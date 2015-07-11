@@ -1,5 +1,7 @@
 require 'spec_helper'
 
+# Unit tests of the Session module, plus common behavior for all classes/
+# subclasses defined in the module
 describe GlobalSession::Session do
   include SpecHelper
 
@@ -27,19 +29,17 @@ describe GlobalSession::Session do
       let(:klass) { GlobalSession::Session.const_get("V#{version}".to_sym) }
       let(:cookie)  { klass.new(@directory).to_s }
 
-      context "given a valid serialized session" do
-        context '.new' do
-          it 'creates a compatible session object' do
-            session = GlobalSession::Session.new(@directory, cookie)
-            session.should be_a(klass)
-          end
+      context '.new' do
+        it 'creates a compatible session object' do
+          session = GlobalSession::Session.new(@directory, cookie)
+          session.should be_a(klass)
         end
+      end
 
-        context '.decode_cookie' do
-          it 'returns useful debug info' do
-            h = klass.decode_cookie(cookie)
-            h.should respond_to(:each)
-          end
+      context '.decode_cookie' do
+        it 'returns useful debug info' do
+          h = klass.decode_cookie(cookie)
+          h.should respond_to(:each)
         end
       end
 
@@ -73,6 +73,20 @@ describe GlobalSession::Session do
         end
       end
 
+      context '#to_s' do
+        let(:session) { GlobalSession::Session.new(@directory, cookie) }
+        let(:reloaded_session) { GlobalSession::Session.new(@directory, session.to_s) }
+
+        it 'recomputes signature when secure attributes change' do
+          session['user'] = 123456
+          reloaded_session['user'].should == 123456
+        end
+
+        it 'recomputes signature when expired_at changes' do
+          session.renew!
+          reloaded_session.expired_at.should be_close(session.expired_at, 1)
+        end
+      end
     end
   end
 
