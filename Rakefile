@@ -33,6 +33,7 @@ if require_succeeds? 'jeweler'
     gem.description = %Q{This Rack middleware allows several web apps in an authentication domain to share session state, facilitating single sign-on in a distributed web app. It only provides session sharing and does not concern itself with authentication or replication of the user database.}
     gem.email = "support@rightscale.com"
     gem.authors = ['Tony Spataro']
+    gem.required_ruby_version = '~> 2.0'
     gem.files.exclude 'Gemfile*'
     gem.files.exclude 'features/**/*'
     gem.files.exclude 'fixtures/**/*'
