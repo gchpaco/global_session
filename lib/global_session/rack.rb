@@ -19,6 +19,7 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+
 require File.expand_path(File.join(File.dirname(__FILE__), "..", "global_session"))
 
 # Make sure the namespace exists, to satisfy Rails auto-loading
@@ -163,7 +164,7 @@ module GlobalSession
         if header_data && header_data.size == 2 && header_data.first.downcase == 'bearer'
           env['global_session.req.renew']  = false
           env['global_session.req.update'] = false
-          env['global_session']            = @directory.load_session(header_data.last)
+          env['global_session']            = @directory.load_session(unmunge(header_data.last))
           true
         else
           false
@@ -176,10 +177,11 @@ module GlobalSession
       # @param [Hash] env Rack request environment
       def read_cookie(env)
         if @cookie_retrieval && (cookie = @cookie_retrieval.call(env))
-          env['global_session'] = @directory.load_session(cookie)
+          env['global_session'] = @directory.load_session(unmunge(cookie))
           true
         elsif env['rack.cookies'].has_key?(@cookie_name)
-          env['global_session'] = @directory.load_session(env['rack.cookies'][@cookie_name])
+          cookie = env['rack.cookies'][@cookie_name]
+          env['global_session'] = @directory.load_session(unmunge(cookie))
           true
         else
           false
@@ -344,6 +346,15 @@ module GlobalSession
         end
 
         domain
+      end
+
+      # URL-decode a string. Some user agents like to "helpfully" URL-encode
+      # cookie and header values, and our Base64Cookie encoding scheme uses the
+      # '=' character (and expects it to cleanly round-trip). By unmunging all
+      # values before we pass them into the session serialization logic, we
+      # prevent subtle signature validation and other issues from happening.
+      def unmunge(value)
+        CGI.unescape(value)
       end
     end
   end
