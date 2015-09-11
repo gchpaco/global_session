@@ -367,24 +367,33 @@ describe GlobalSession::Rack::Middleware do
 
     context 'with a cookie' do
       before(:each) do
-        @original_session = GlobalSession::Session.new(@directory)
-        @cookie = @original_session.to_s
+        @cookie_jar.should_receive(:has_key?).with('global_session_cookie').and_return(true)
       end
 
+      let(:original_session) { GlobalSession::Session.new(@directory) }
+      let(:cookie) { original_session.to_s }
+      let(:malformed_cookie) { 'mwahahaha' }
+      let(:encoded_cookie) { CGI.escape(cookie) }
+
       it 'parses valid cookies and populates the env' do
-        @cookie_jar.should_receive(:has_key?).with('global_session_cookie').and_return(true)
-        @cookie_jar.should_receive(:[]).with('global_session_cookie').and_return(@cookie)
+        @cookie_jar.should_receive(:[]).with('global_session_cookie').and_return(cookie)
         @app.read_cookie(@env).should == true
         @env.should have_key('global_session')
-        @env['global_session'].to_s.should == @cookie
+        @env['global_session'].to_s.should == cookie
       end
 
       it 'raises on malformed cookies' do
-        @cookie_jar.should_receive(:has_key?).with('global_session_cookie').and_return(true)
-        @cookie_jar.should_receive(:[]).with('global_session_cookie').and_return('mwahahaha')
+        @cookie_jar.should_receive(:[]).with('global_session_cookie').and_return(malformed_cookie)
         expect {
           @app.read_cookie(@env)
         }.to raise_error(GlobalSession::MalformedCookie)
+      end
+
+      it 'copes with URL-encoded cookies' do
+        @cookie_jar.should_receive(:[]).with('global_session_cookie').and_return(encoded_cookie)
+        @app.read_cookie(@env).should == true
+        @env.should have_key('global_session')
+        @env['global_session'].to_s.should == cookie
       end
     end
   end
