@@ -106,8 +106,18 @@ module GlobalSession
         @cookie_name      = @configuration['cookie']['name']
       end
 
-      # Rack request chain. Sets up the global session ticket from
-      # the environment and passes it up the chain.
+      # Rack request chain. Parses a global session from the request if present;
+      # makes a new session if absent; populates env['global_session'] with the
+      # session object and calls through to the next middleware.
+      #
+      # On return, auto-renews the session if appropriate and writes a new
+      # session cookie if anything in the session has changed.
+      #
+      # When reading session cookies or authorization headers, this middleware
+      # URL-decodes cookie/token values before passing them into the gem's
+      # other logic. Some user agents and proxies "helpfully" URL-encode cookies
+      # which we need to undo in order to prevent subtle signature failures due
+      # to Base64 decoding issues resulting from "=" being URL-encoded.
       #
       # @return [Array] valid Rack response tuple e.g. [200, 'hello world']
       # @param [Hash] env Rack request environment
@@ -164,7 +174,7 @@ module GlobalSession
         if header_data && header_data.size == 2 && header_data.first.downcase == 'bearer'
           env['global_session.req.renew']  = false
           env['global_session.req.update'] = false
-          env['global_session']            = @directory.load_session(unmunge(header_data.last))
+          env['global_session']            = @directory.load_session(CGI.unescape(header_data.last))
           true
         else
           false
@@ -177,11 +187,11 @@ module GlobalSession
       # @param [Hash] env Rack request environment
       def read_cookie(env)
         if @cookie_retrieval && (cookie = @cookie_retrieval.call(env))
-          env['global_session'] = @directory.load_session(unmunge(cookie))
+          env['global_session'] = @directory.load_session(CGI.unescape(cookie))
           true
         elsif env['rack.cookies'].has_key?(@cookie_name)
           cookie = env['rack.cookies'][@cookie_name]
-          env['global_session'] = @directory.load_session(unmunge(cookie))
+          env['global_session'] = @directory.load_session(CGI.unescape(cookie))
           true
         else
           false
@@ -346,15 +356,6 @@ module GlobalSession
         end
 
         domain
-      end
-
-      # URL-decode a string. Some user agents like to "helpfully" URL-encode
-      # cookie and header values, and our Base64Cookie encoding scheme uses the
-      # '=' character (and expects it to cleanly round-trip). By unmunging all
-      # values before we pass them into the session serialization logic, we
-      # prevent subtle signature validation and other issues from happening.
-      def unmunge(value)
-        CGI.unescape(value)
       end
     end
   end
