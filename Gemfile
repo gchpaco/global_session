@@ -22,5 +22,5 @@ group :development do
       :platforms => [:ruby_19, :ruby_20, :ruby_21]
   gem 'pry-byebug', '~> 2.0',
       :platforms => [:ruby_19, :ruby_20, :ruby_21]
-  gem 'jeweler', '~> 1.8.3'
+  gem 'jeweler', '~> 1.8'
 end

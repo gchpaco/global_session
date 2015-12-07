@@ -66,7 +66,7 @@ Gem::Specification.new do |s|
       s.add_development_dependency(%q<ruby-debug>, ["~> 0.10"])
       s.add_development_dependency(%q<pry>, ["~> 0.10"])
       s.add_development_dependency(%q<pry-byebug>, ["~> 2.0"])
-      s.add_development_dependency(%q<jeweler>, ["~> 1.8.3"])
+      s.add_development_dependency(%q<jeweler>, ["~> 1.8"])
     else
       s.add_dependency(%q<json>, ["~> 1.4"])
       s.add_dependency(%q<rack-contrib>, ["~> 1.0"])
@@ -75,7 +75,7 @@ Gem::Specification.new do |s|
       s.add_dependency(%q<ruby-debug>, ["~> 0.10"])
       s.add_dependency(%q<pry>, ["~> 0.10"])
       s.add_dependency(%q<pry-byebug>, ["~> 2.0"])
-      s.add_dependency(%q<jeweler>, ["~> 1.8.3"])
+      s.add_dependency(%q<jeweler>, ["~> 1.8"])
     end
   else
     s.add_dependency(%q<json>, ["~> 1.4"])
@@ -85,7 +85,7 @@ Gem::Specification.new do |s|
     s.add_dependency(%q<ruby-debug>, ["~> 0.10"])
     s.add_dependency(%q<pry>, ["~> 0.10"])
     s.add_dependency(%q<pry-byebug>, ["~> 2.0"])
-    s.add_dependency(%q<jeweler>, ["~> 1.8.3"])
+    s.add_dependency(%q<jeweler>, ["~> 1.8"])
   end
 end
 

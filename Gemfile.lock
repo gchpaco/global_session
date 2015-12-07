@@ -103,7 +103,7 @@ DEPENDENCIES
   cucumber (~> 1.0)
   flexmock (~> 0.8)
   httpclient
-  jeweler (~> 1.8.3)
+  jeweler (~> 1.8)
   json (~> 1.4)
   msgpack (~> 0.4)
   pry (~> 0.10)
@@ -117,4 +117,4 @@ DEPENDENCIES
   simple_uuid (>= 0.2.0)
 
 BUNDLED WITH
-   1.10.4
+   1.10.6
