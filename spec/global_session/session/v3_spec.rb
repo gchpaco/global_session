@@ -7,7 +7,7 @@ describe GlobalSession::Session::V3 do
   before(:each) do
     mock_config('test/trust', ['authority1'])
     mock_config('test/authority', 'authority1')
-    mock_config('common/attributes/signed', ['user'])
+    mock_config('common/attributes/signed', ['user', 'ui'])
     mock_config('common/attributes/insecure', ['favorite_color'])
     @directory        = GlobalSession::Directory.new(mock_config, @key_factory.dir)
     @original_session = described_class.new(@directory)
@@ -25,6 +25,61 @@ describe GlobalSession::Session::V3 do
       end
 
       (Float(size) / Float(count)).should be_close(285, 5)
+    end
+  end
+
+  context '#delete' do
+    context 'when the key is insecure' do
+      before(:each) do
+        @original_session['favorite_color'] = 'bar'
+      end
+
+      it 'removes the key from the session' do
+        @original_session.delete('favorite_color')
+        @original_session['favorite_color'].should be_nil
+      end
+    end
+
+    context 'when the key is signed' do
+      before(:each) do
+        @original_session['user'] = 'bar'
+      end
+
+      it 'removes the key from the session' do
+        @original_session.delete('user')
+        @original_session['user'].should be_nil
+      end
+    end
+
+    context 'when the key does not exist in the session' do
+      it 'raises ArgumentError' do
+        expect {
+          @original_session.delete('foo')
+        }.to raise_error(ArgumentError)
+      end
+    end
+  end
+
+  context '#no_ui' do
+    before(:each) do
+      @original_session['ui'] = '403'
+    end
+
+    it "returns a session without the signed 'ui' key" do
+      new_session = @original_session.no_ui
+      new_session['ui'].should be_nil
+    end
+  end
+
+  context '#clone' do
+    before(:each) do
+      @original_session['user'] = 'bar'
+    end
+
+    it 'is not destructive to the original session' do
+      new_session = @original_session.clone
+      new_session.delete('user')
+      @original_session['user'].should == 'bar'
     end
   end
 
