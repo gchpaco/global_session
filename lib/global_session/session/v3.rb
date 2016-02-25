@@ -107,6 +107,32 @@ module GlobalSession::Session
       result
     end
 
+    # Delete a key from the global session attributes. If the key exists,
+    # mark the global session dirty
+    #
+    # @param [String] the key to delete
+    # @return [Object] the value of the key deleted, or nil if not found
+    def delete(key)
+      key = key.to_s #take care of symbol-style keys
+      raise GlobalSession::InvalidSession unless valid?
+
+      if @schema_signed.include?(key)
+        authority_check
+
+        # Only mark dirty if the key actually exists
+        @dirty_secure = true if @signed.keys.include? key
+        value = @signed.delete(key)
+      elsif @schema_insecure.include?(key)
+        
+        # Only mark dirty if the key actually exists
+        @dirty_insecure = true if @insecure.keys.include? key
+        value = @insecure.delete(key)
+      else
+        raise ArgumentError, "Attribute '#{key}' is not specified in global session configuration"
+      end
+      
+      return value
+    end
 
     # Serialize the session to a form suitable for use with HTTP cookies. If any
     # secure attributes have changed since the session was instantiated, compute
@@ -247,6 +273,16 @@ module GlobalSession::Session
     end
 
     private
+
+    # This is called by #clone and is used to augment the shallow clone behavior
+    #
+    # @return [Object] this global session object which doesn't reference the
+    # the hashes from the original object
+    def initialize_copy(source)
+      super
+      @signed = ::RightSupport::Data::HashTools.deep_clone2(@signed)
+      @insecure = ::RightSupport::Data::HashTools.deep_clone2(@insecure)
+    end
 
     def load_from_cookie(cookie) # :nodoc:
       hash = nil

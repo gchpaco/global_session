@@ -28,6 +28,50 @@ describe GlobalSession::Session::V3 do
     end
   end
 
+  context '#delete' do
+    context 'when the key is insecure' do
+      before(:each) do
+        @original_session['favorite_color'] = 'bar'
+      end
+
+      it 'removes the key from the session' do
+        @original_session.delete('favorite_color')
+        @original_session['favorite_color'].should be_nil
+      end
+    end
+
+    context 'when the key is signed' do
+      before(:each) do
+        @original_session['user'] = 'bar'
+      end
+
+      it 'removes the key from the session' do
+        @original_session.delete('user')
+        @original_session['user'].should be_nil
+      end
+    end
+
+    context 'when the key does not exist in the session' do
+      it 'raises ArgumentError' do
+        expect {
+          @original_session.delete('foo')
+        }.to raise_error(ArgumentError)
+      end
+    end
+  end
+
+  context '#clone' do
+    before(:each) do
+      @original_session['user'] = 'bar'
+    end
+
+    it 'is not destructive to the original session' do
+      new_session = @original_session.clone
+      new_session.delete('user')
+      @original_session['user'].should == 'bar'
+    end
+  end
+
   context '#to_s' do
     context 'when the session contains unserializable keys' do
       before(:each) do
