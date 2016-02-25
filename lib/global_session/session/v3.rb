@@ -107,18 +107,6 @@ module GlobalSession::Session
       result
     end
 
-    # Return a copy of this global session with the 'ui' attribute removed. Primarily
-    # used by code that is making API calls to other parts of the system that enforce
-    # CSRF. When we have a system->system call, we should strip the 'ui' attribute so
-    # that CSRF checks are not made
-    #
-    # @return [Object] this global session object without the 'ui' key in the hash
-    def no_ui
-      session_without_ui = clone
-      session_without_ui.delete('ui')
-      session_without_ui
-    end
-
     # Delete a key from the global session attributes. If the key exists,
     # mark the global session dirty
     #

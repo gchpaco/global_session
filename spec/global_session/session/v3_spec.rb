@@ -7,7 +7,7 @@ describe GlobalSession::Session::V3 do
   before(:each) do
     mock_config('test/trust', ['authority1'])
     mock_config('test/authority', 'authority1')
-    mock_config('common/attributes/signed', ['user', 'ui'])
+    mock_config('common/attributes/signed', ['user'])
     mock_config('common/attributes/insecure', ['favorite_color'])
     @directory        = GlobalSession::Directory.new(mock_config, @key_factory.dir)
     @original_session = described_class.new(@directory)
@@ -57,17 +57,6 @@ describe GlobalSession::Session::V3 do
           @original_session.delete('foo')
         }.to raise_error(ArgumentError)
       end
-    end
-  end
-
-  context '#no_ui' do
-    before(:each) do
-      @original_session['ui'] = '403'
-    end
-
-    it "returns a session without the signed 'ui' key" do
-      new_session = @original_session.no_ui
-      new_session['ui'].should be_nil
     end
   end
 
