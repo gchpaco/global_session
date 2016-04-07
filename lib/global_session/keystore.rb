@@ -62,6 +62,17 @@ module GlobalSession
       load
     end
 
+    # Factory method to generate a new keypair for use with GlobalSession.
+    #
+    # @raise [ArgumentError] if cryptosystem is unknown to OpenSSL
+    # @return [OpenSSL::PKey::PKey] a public/private keypair
+    def self.create_keypair(cryptosystem=:RSA, keysize=1024)
+      factory = OpenSSL::PKey.const_get(cryptosystem)
+      factory.generate( 1024 )
+    rescue NameError => e
+      raise ArgumentError, e.message
+    end
+
     private
 
     # Load all public and/or private keys from location(s) specified in the configuration's
