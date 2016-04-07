@@ -1,5 +1,16 @@
 Copyright (c) 2009-2015 RightScale, Inc. <support@rightscale.com>; see LICENSE for more details.
 
+= Preamble
+
+<b>WARNING:</b> This RubyGem was authored in 2010 when Rails 2.1 was state of
+the art. Its Rails integration has not been kept up to date over time; it is
+untested with Rails 3, 4 and 5, and its generators are broken with Rails above
+2.3.5.
+
+We continue to support the Rack middleware and other components of this gem,
+and recommend using it as a plain old Rack middleware in your Rails apps.
+Instructions for doing so are provided in this README.
+
 = Introduction
 
 GlobalSession enables multiple heterogeneous Web applications to share
@@ -44,25 +55,81 @@ particular, it does not provide any of the following:
 
 = Examples
 
+== Make a YML configuration file
+
+The config file format is designed to be self-documenting. The most important
+data are: what data can be in your global session (`attributes`), what
+directory contains your `.pub` files with authorities' public keys (`keystore.public`),
+and the locatio nof `.key` private key file, if any, used by this app (`keystore.private`).
+
+You can omit `keystore.private` if the app should be able to read, but not
+write, global sessions.
+
+If you have asymmetrical trust (e.g. dev trusts production but not vice-versa),
+you can include an optional `trust` list. By default, every public key file is
+trusted.
+
+    common:
+      attributes:
+        signed:
+        - user
+        insecure:
+        - favorite_color
+      cookie:
+        name: global_session
+      keystore:
+        public: config/authorities
+      renew: 30
+      timeout: 60
+    development:
+      keystore:
+        private: config/authorities/dev
+    production:
+    trust:
+      - prod
+    keystore:
+      private: config/authorities/prod
+
+== Make a new keypair for a GlobalSession authority
+
+Decide on a name for your authority. The name is a short string that identifies
+a pair of key files on disk (one public, one private) which will be used to
+sign and verify sessions. If you have mutual trust between every app in your
+architecture, then you only need one authority and your domain name, e.g.
+`example-com`, is a fine choice of name. If you want partition trust within your
+architecture, then authorities could be named after environments
+(`staging`, `production`), regions (`us`, `eu`) or even specific apps
+(`frontend`, `api`) depending on where you draw the trust boundaries.
+
+Figure out where key files live in your application. This is whatever value
+you set in the `keystore: public: ...` directive in the configuration.
+
+If you have complete, mutual trust between all components of your architecture,
+then something based on your organization's domain name (e.g. `example-com`)
+is a fine choice.
+
+Open irb or your console of choice and require the `global_session` gem.
+
+    # default is RSA cryptosystem with 1024-bit keys.
+    keypair = GlobalSession::Keystore.create_keypair(:RSA, 1024)
+    public_pem  = keypair.public_key.to_pem
+    private_pem = keypair.to_pem
+
+    # write keys to disk
+    File.open('config/authorities/example-com.pub', 'w') { |f| f.write public_pem }
+    File.open('config/authorities/example-com.key', 'w') { |f| f.write private_pem }
+
 == Integration with Rails
 
-1) Create a basic config file and edit it to suit your needs:
-    $ script/generate global_session_config mycoolapp.com
+Install the GlobalSession middleware in your application startup. Open
+`environment.rb` or `application.rb` (depending on your Rails version) and
+add a new file to `config/initializers` to configure and install the
+middleware:
 
-2) Create an authentication authority:
-    $ script/generate global_session_authority mycoolapp
+    configuration = GlobalSession::Configuration.new('config/global_session.yml', Rails.env)
+    directory = GlobalSession::Directory.new(configuration)
 
-3) Declare that some or all of your controllers will use the global session:
-    class ApplicationController < ActionController::Base
-      has_global_session
-    end
-
-4) Make use of the global session hash in your controllers:
-    global_session['user'] = @user.id
-    ...
-    @current_user = User.find(global_session['user'])
-
-== Integration with Other Ruby Web Frameworks
+== Integration with Rack
 
 Install the GlobalSession middleware into your Rack stack; pass a config and a directory
 object to its initializer. For instance, in config.ru:
@@ -70,6 +137,12 @@ object to its initializer. For instance, in config.ru:
     configuration = GlobalSession::Configuration.new('path/to/config.yml', RACK_ENV)
     directory = GlobalSession::Directory.new(configuration)
     use ::GlobalSession::Rack::Middleware, configuration, directory
+
+    Application.config.middleware.insert_before(Application.config.session_store, ::Rack::Cookies)
+    Application.config.middleware.insert_before(Application.config.session_store, ::Rack::GlobalSession, configuration, directory)
+
+Note that the GlobalSession middleware depends on `Rack::Cookies`; be sure
+to install them both, and in the proper order.
 
 = Global Session Contents
 

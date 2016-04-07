@@ -30,7 +30,7 @@ class GlobalSessionAuthorityGenerator < Rails::Generator::Base
 
   def manifest
     record do |m|
-      new_key     = OpenSSL::PKey::RSA.generate( 1024 )
+      new_key = GlobalSession::Keystore.create_keypair(:RSA, 1024)
       new_public  = new_key.public_key.to_pem
       new_private = new_key.to_pem
 
