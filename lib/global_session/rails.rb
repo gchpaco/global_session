@@ -69,9 +69,15 @@ module GlobalSession
               "Specified directory class '#{dir_name}' does not inherit from GlobalSession::Directory"
       end
 
-      authorities_dir = File.join(::Rails.root, 'config', 'authorities')
-      self.directory = dir_klass.new(self.configuration, authorities_dir)
-      self.keystore = self.directory.keystore
+      if self.configuration['keystore'].blank? || self.configuration['keystore']['public'].blank?
+        # Support legacy behavior (config/authorities dir always contains pub keys)
+        authorities_dir = File.join(::Rails.root, 'config', 'authorities')
+        self.directory = dir_klass.new(self.configuration, authorities_dir)
+        self.keystore = self.directory.keystore
+      else
+        # Prefer modern behavior (configuration tells us where to find pub keys)
+        self.directory = dir_klass.new(self.configuration)
+      end
 
       # Add our middleware to the stack.
       rails_config.middleware.insert_before(ActionController::Base.session_store, ::Rack::Cookies)
