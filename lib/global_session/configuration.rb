@@ -144,7 +144,7 @@ module GlobalSession
     #
     # @return [Boolean] true if the key is present in the common or per-environment stanzas
     def has_key?(k)
-      @config[@environment].has_key?(k) || @config['common'].has_key?(k)
+      (@config.has_key?(@environment) && @config[@environment].has_key?(k)) || @config['common'].has_key?(k)
     end
 
     alias key? has_key?
