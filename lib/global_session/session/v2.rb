@@ -22,6 +22,9 @@
 # Standard library dependencies
 require 'set'
 
+# Cryptographical Hash
+require 'right_support/crypto'
+
 module GlobalSession::Session
   # Global session V2 uses msgpack serialization and no compression. Its msgpack structure is an
   # Array with the following format:
