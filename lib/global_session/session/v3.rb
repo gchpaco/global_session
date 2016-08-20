@@ -22,6 +22,9 @@
 # Standard library dependencies
 require 'set'
 
+# Cryptographical Hash
+require 'right_support/crypto'
+
 module GlobalSession::Session
   # Global session V3 uses JSON serialization, no compression, and a detached signature that is
   # excluded from the JSON structure for efficiency reasons.
@@ -123,14 +126,14 @@ module GlobalSession::Session
         @dirty_secure = true if @signed.keys.include? key
         value = @signed.delete(key)
       elsif @schema_insecure.include?(key)
-        
+
         # Only mark dirty if the key actually exists
         @dirty_insecure = true if @insecure.keys.include? key
         value = @insecure.delete(key)
       else
         raise ArgumentError, "Attribute '#{key}' is not specified in global session configuration"
       end
-      
+
       return value
     end
 
