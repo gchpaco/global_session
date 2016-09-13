@@ -2,6 +2,7 @@ require 'spec_helper'
 require File.expand_path('../shared_examples', __FILE__)
 
 describe GlobalSession::Session::V2 do
+  let(:signature_method) { :private_encrypt }
   it_should_behave_like 'all subclasses of Session::Abstract'
 
   context 'cookie size' do

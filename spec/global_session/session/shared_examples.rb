@@ -1,5 +1,7 @@
 require 'spec_helper'
 
+# Depends on the following lets:
+#     signature_method: either :private_encrypt or :sign
 shared_examples_for 'all subclasses of Session::Abstract' do
   include SpecHelper
 
@@ -151,6 +153,48 @@ shared_examples_for 'all subclasses of Session::Abstract' do
       it 'returns false when the session was loaded from a cookie' do
         loaded_session = described_class.new(@directory, @session.to_s)
         loaded_session.new_record?.should be_false
+      end
+    end
+
+    context 'given a valid session received over the network' do
+      let(:cookie) { @session.to_s }
+
+      before do
+        # force signature + reload + non-new-record
+        @session = described_class.new(@directory, cookie)
+      end
+
+      context :dirty? do
+        it 'returns true when secure attributes change' do
+          @session.dirty?.should be_false
+          @session['user'] = rand(2**32-1)
+          @session.dirty?.should be_true
+        end
+
+        it 'returns true when insecure attributes change' do
+          @session.dirty?.should be_false
+          @session['favorite_color'] = 'thistle'
+          @session.dirty?.should be_true
+        end
+      end
+
+      context :to_s do
+        it 'reuses signature when nothing has changed' do
+          flexmock(@directory.private_key).should_receive(signature_method).never
+          @session.to_s
+        end
+
+        it 'reuses signature when insecure attributes change' do
+          flexmock(@directory.private_key).should_receive(signature_method).never
+          @session['favorite_color'] = 'mauve'
+          @session.to_s
+        end
+
+        it 'computes signature when secure secure attributes change' do
+          flexmock(@directory.private_key).should_receive(signature_method).once.and_return('signature')
+          @session['user'] = rand(2**32-1)
+          @session.to_s
+        end
       end
     end
   end
