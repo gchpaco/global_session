@@ -70,7 +70,7 @@ module GlobalSession::Session
               'tc' => @created_at.to_i, 'te' => @expired_at.to_i,
               'ds' => @signed}
 
-      if @signature && !dirty?
+      if @signature && !@dirty_secure
         #use cached signature unless we've changed secure state
         authority = @authority
       else
