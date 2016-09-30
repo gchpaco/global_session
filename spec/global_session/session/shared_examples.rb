@@ -190,6 +190,12 @@ shared_examples_for 'all subclasses of Session::Abstract' do
           @session.to_s
         end
 
+        it 'computes signature when timestamps change' do
+          flexmock(@directory.private_key).should_receive(signature_method).once.and_return('signature')
+          @session.renew!
+          @session.to_s
+        end
+
         it 'computes signature when secure secure attributes change' do
           flexmock(@directory.private_key).should_receive(signature_method).once.and_return('signature')
           @session['user'] = rand(2**32-1)
