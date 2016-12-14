@@ -2,31 +2,31 @@ require 'spec_helper'
 require File.expand_path('../shared_examples', __FILE__)
 
 describe GlobalSession::Session::V3 do
+  subject { GlobalSession::Session::V3 }
+
+  include SpecHelper
+
+  let(:key_generation_parameter) { 1024 }
   let(:signature_method) { :sign }
+  let(:approximate_token_size) { 260 }
   it_should_behave_like 'all subclasses of Session::Abstract'
 
-  before(:each) do
+  before do
+    @key_factory = KeyFactory.new
+    @key_factory.create('authority1', true, parameter:key_generation_parameter)
+    @key_factory.create('authority2', false, parameter:key_generation_parameter)
     mock_config('test/trust', ['authority1'])
     mock_config('test/authority', 'authority1')
+    mock_config('test/timeout', '60')
     mock_config('common/attributes/signed', ['user'])
     mock_config('common/attributes/insecure', ['favorite_color'])
     @directory        = GlobalSession::Directory.new(mock_config, @key_factory.dir)
-    @original_session = described_class.new(@directory)
+    @original_session = subject.new(@directory)
     @cookie           = @original_session.to_s
   end
 
-  context 'cookie size' do
-    it 'has size ~260 bytes' do
-      size  = 0
-      count = 0
-      100.times do
-        session = described_class.new(@directory)
-        size += session.to_s.size
-        count += 1
-      end
-
-      (Float(size) / Float(count)).should be_close(285, 5)
-    end
+  after do
+    @key_factory.destroy
   end
 
   context '#delete' do
@@ -37,7 +37,7 @@ describe GlobalSession::Session::V3 do
 
       it 'removes the key from the session' do
         @original_session.delete('favorite_color')
-        @original_session['favorite_color'].should be_nil
+        expect(@original_session['favorite_color']).to eq(nil)
       end
     end
 
@@ -48,7 +48,7 @@ describe GlobalSession::Session::V3 do
 
       it 'removes the key from the session' do
         @original_session.delete('user')
-        @original_session['user'].should be_nil
+        expect(@original_session['user']).to eq(nil)
       end
     end
 
@@ -69,7 +69,7 @@ describe GlobalSession::Session::V3 do
     it 'is not destructive to the original session' do
       new_session = @original_session.clone
       new_session.delete('user')
-      @original_session['user'].should == 'bar'
+      expect(@original_session['user']).to eq('bar')
     end
   end
 
