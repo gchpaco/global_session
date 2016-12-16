@@ -7,8 +7,8 @@ shared_examples_for 'all subclasses of Session::Abstract' do
 
   before do
     @key_factory = KeyFactory.new
-    @key_factory.create('authority1', true)
-    @key_factory.create('authority2', false)
+    @key_factory.create('authority1', true, parameter:key_generation_parameter)
+    @key_factory.create('authority2', false, parameter:key_generation_parameter)
   end
 
   after do
