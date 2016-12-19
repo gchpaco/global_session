@@ -39,6 +39,9 @@ module GlobalSession::Session
   # * The sign and verify algorithms, while safe, do not comply fully with PKCS7; they rely on the
   #   OpenSSL low-level crypto API instead of using the higher-level EVP (envelope) API.
   class V1 < Abstract
+    # Pattern that matches strings that are probably a V1 session cookie.
+    HEADER = /^eN/
+
     # Utility method to decode a cookie; good for console debugging. This performs no
     # validation or security check of any sort.
     #
@@ -266,23 +269,12 @@ module GlobalSession::Session
     end
 
     def create_from_scratch # :nodoc:
-      authority_check
-
       @signed = {}
       @insecure = {}
       @created_at = Time.now.utc
       @authority = @directory.local_authority_name
       @id = RightSupport::Data::UUID.generate
       renew!
-    end
-
-    def create_invalid # :nodoc:
-      @id = nil
-      @created_at = Time.now.utc
-      @expired_at = created_at
-      @signed = {}
-      @insecure = {}
-      @authority = nil
     end
   end
 end

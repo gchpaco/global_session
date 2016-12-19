@@ -5,6 +5,9 @@ require 'spec_helper'
 describe GlobalSession::Session do
   include SpecHelper
 
+  CURRENT_MAJOR = Integer(GlobalSession::VERSION.split('.').first)
+  CURRENT_CLASS = GlobalSession::Session.const_get("V#{CURRENT_MAJOR}".to_sym)
+
   before(:all) do
     @key_factory = KeyFactory.new
     @key_factory.create('authority1', true)
@@ -24,7 +27,7 @@ describe GlobalSession::Session do
     @directory        = GlobalSession::Directory.new(mock_config, @key_factory.dir)
   end
 
-  (1..3).each do |version|
+  (1..CURRENT_MAJOR).each do |version|
     context "V#{version}" do
       let(:klass) { GlobalSession::Session.const_get("V#{version}".to_sym) }
       let(:cookie)  { klass.new(@directory).to_s }
@@ -90,13 +93,16 @@ describe GlobalSession::Session do
     end
   end
 
-  context 'given garbage' do
-    context '.new' do
-      it 'raises MalformedCookie' do
-        expect {
-          GlobalSession::Session.new(@directory, 'hi mom')
-        }.to raise_error(GlobalSession::MalformedCookie)
-      end
+  context '.new' do
+    it "returns a #{CURRENT_CLASS} when cookie is absent" do
+      s = GlobalSession::Session.new(@directory)
+      expect(s).to be_a(CURRENT_CLASS)
+    end
+
+    it 'raises MalformedCookie when cookie is garbage' do
+      expect {
+        GlobalSession::Session.new(@directory, 'hi mom')
+      }.to raise_error(GlobalSession::MalformedCookie)
     end
   end
 end

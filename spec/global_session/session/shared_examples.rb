@@ -25,7 +25,7 @@ shared_examples_for 'all subclasses of Session::Abstract' do
     reset_mock_config
   end
 
-  context :initialize do
+  context '#initialize' do
     before(:each) do
       mock_config('test/trust', ['authority1'])
       mock_config('test/authority', 'authority1')
@@ -126,7 +126,7 @@ shared_examples_for 'all subclasses of Session::Abstract' do
       @session   = subject.new(@directory)
     end
 
-    context :renew! do
+    context '#renew!' do
       it 'updates created_at' do
         old = @session.created_at
         future_time = Time.at(Time.now.to_i + 5)
@@ -144,7 +144,7 @@ shared_examples_for 'all subclasses of Session::Abstract' do
       end
     end
 
-    context :new_record? do
+    context '#new_record?' do
       it 'returns true when the session was just created' do
         expect(@session.new_record?).to eq(true)
       end
@@ -152,6 +152,38 @@ shared_examples_for 'all subclasses of Session::Abstract' do
       it 'returns false when the session was loaded from a cookie' do
         loaded_session = subject.new(@directory, @session.to_s)
         expect(loaded_session.new_record?).to eq(false)
+      end
+    end
+
+    context '#delete' do
+      context 'when the key is insecure' do
+        before(:each) do
+          @session['favorite_color'] = 'bar'
+        end
+
+        it 'removes the key from the session' do
+          @session.delete('favorite_color')
+          expect(@session['favorite_color']).to eq(nil)
+        end
+      end
+
+      context 'when the key is signed' do
+        before(:each) do
+          @session['user'] = 'bar'
+        end
+
+        it 'removes the key from the session' do
+          @session.delete('user')
+          expect(@session['user']).to eq(nil)
+        end
+      end
+
+      context 'when the key does not exist in the session' do
+        it 'raises ArgumentError' do
+          expect {
+            @session.delete('foo')
+          }.to raise_error(ArgumentError)
+        end
       end
     end
 
@@ -163,7 +195,7 @@ shared_examples_for 'all subclasses of Session::Abstract' do
         @session = subject.new(@directory, cookie)
       end
 
-      context :dirty? do
+      context '#dirty?' do
         it 'returns true when secure attributes change' do
           expect(@session.dirty?).to eq(false)
           @session['user'] = rand(2**32-1)
@@ -177,32 +209,43 @@ shared_examples_for 'all subclasses of Session::Abstract' do
         end
       end
 
-      context :to_s do
+      context '#to_s' do
         it 'produces a reasonably sized token' do
           expect(@session.to_s.size).to be_within(approximate_token_size * 0.10).of(approximate_token_size)
         end
 
         it 'reuses signature when nothing has changed' do
-          flexmock(@directory.private_key).should_receive(signature_method).never
-          @session.to_s
+          expect(@session.to_s).to eq(cookie)
         end
 
         it 'reuses signature when insecure attributes change' do
-          flexmock(@directory.private_key).should_receive(signature_method).never
           @session['favorite_color'] = 'mauve'
-          @session.to_s
+          expect(@session.to_s).not_to eq(cookie)
         end
 
         it 'computes signature when timestamps change' do
-          flexmock(@directory.private_key).should_receive(signature_method).once.and_return('signature')
+          before = @session.to_s
+          sleep(1) # ensure timestamp will change
           @session.renew!
-          @session.to_s
+          after = @session.to_s
+          expect(before).not_to eq(after)
         end
 
         it 'computes signature when secure secure attributes change' do
-          flexmock(@directory.private_key).should_receive(signature_method).once.and_return('signature')
           @session['user'] = rand(2**32-1)
-          @session.to_s
+          expect(@session.to_s).not_to eq(cookie)
+        end
+      end
+
+      context '#clone' do
+        before(:each) do
+          @session['user'] = 'bar'
+        end
+
+        it 'is not destructive to the original session' do
+          new_session = @session.clone
+          new_session.delete('user')
+          expect(@session['user']).to eq('bar')
         end
       end
     end

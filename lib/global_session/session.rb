@@ -7,6 +7,7 @@ require 'global_session/session/abstract'
 require 'global_session/session/v1'
 require 'global_session/session/v2'
 require 'global_session/session/v3'
+require 'global_session/session/v4'
 
 # Ladies and gentlemen: the one and only, star of the show, GLOBAL SESSION!
 #
@@ -32,20 +33,24 @@ module GlobalSession::Session
 
   # Decode a global session cookie. Use a heuristic to determine the version.
   # @raise [GlobalSession::MalformedCookie] if the cookie is not a valid serialized global session
-  def self.new(directory, cookie=nil, valid_signature_digest=nil)
+  def self.new(directory, cookie=nil)
     guess_version(cookie).new(directory, cookie)
   end
 
+  # Figure out the protocol version of a serialized session cookie.
+  #
+  # @param [String] cookie
+  # @return [Class] implementation class that can probably deserialize cookie
   def self.guess_version(cookie)
     case cookie
-    when /^WzM/ # == "[3"
+    when nil, V4::HEADER
+      V4
+    when V3::HEADER
       V3
-    when /^l9/  # == binary msgpack symbol for "beginning of array"
+    when V2::HEADER
       V2
-    when /^eN/  # == zlib-compressed form of "{"
-      V1
     else
-      V1        # due to zlib compression, there might be corner cases with the eN prefix
+      V1 # due to zlib compression, no foolproof way to spot V1 sessoins
     end
   end
 end

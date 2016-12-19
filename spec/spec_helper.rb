@@ -10,7 +10,7 @@ require 'global_session'
 begin
   require 'pry'
 rescue LoadError
-  # no-op; debugger is purposefully omitted from some environments
+  # ignore; debug gems may be unavailable
 end
 
 RSpec.configure do |config|
@@ -87,26 +87,33 @@ module SpecHelper
   def tamper_with_signed_attributes(klass, cookie, insecure_attributes)
     zbin = GlobalSession::Encoding::Base64Cookie.load(cookie)
 
-    if klass == GlobalSession::Session::V3
+    case klass.to_s
+    when 'GlobalSession::Session::V4'
+      header, payload, sig, insec = GlobalSession::Session::V4.decode_cookie(cookie)
+      payload.delete(payload.keys.first)
+      header, payload, insec = [header, payload, insec].map { |e| e && RightSupport::Data::Base64URL.encode(GlobalSession::Encoding::JSON.dump(e)) }
+      sig = RightSupport::Data::Base64URL.encode(sig)
+      return [header, payload, sig, insec].compact.join('.')
+    when 'GlobalSession::Session::V3'
       array, sig = GlobalSession::Session::V3.decode_cookie(cookie)
       array[5] = insecure_attributes
       json = GlobalSession::Encoding::JSON.dump(array)
       bin = GlobalSession::Session::V3.join_body(json, sig)
       zbin = bin
-    elsif klass == GlobalSession::Session::V2
+    when 'GlobalSession::Session::V2'
       bin = zbin
       array = GlobalSession::Encoding::Msgpack.load(bin)
       array[4] = insecure_attributes
       bin = GlobalSession::Encoding::Msgpack.dump(array)
       zbin = bin
-    elsif klass == GlobalSession::Session::V1
+    when 'GlobalSession::Session::V1'
       bin = Zlib::Inflate.inflate(zbin)
       hash = GlobalSession::Encoding::JSON.load(bin)
       hash['ds'] = insecure_attributes
       bin = GlobalSession::Encoding::JSON.dump(hash)
       zbin = Zlib::Deflate.deflate(bin, Zlib::BEST_COMPRESSION)
     else
-      raise RuntimeError, "Don't know how to tamper with a #{described_class}"
+      raise RuntimeError, "Don't know how to tamper with a #{subject}"
     end
 
     GlobalSession::Encoding::Base64Cookie.dump(zbin)
@@ -115,26 +122,33 @@ module SpecHelper
   def tamper_with_insecure_attributes(klass, cookie, insecure_attributes)
     zbin = GlobalSession::Encoding::Base64Cookie.load(cookie)
 
-    if klass == GlobalSession::Session::V3
+    case klass.to_s
+    when 'GlobalSession::Session::V4'
+      header, payload, sig, insec = GlobalSession::Session::V4.decode_cookie(cookie)
+      insec.delete(insec.keys.first)
+      header, payload, insec = [header, payload, insec].map { |e| e && RightSupport::Data::Base64URL.encode(GlobalSession::Encoding::JSON.dump(e)) }
+      sig = RightSupport::Data::Base64URL.encode(sig)
+      return [header, payload, sig, insec].compact.join('.')
+    when 'GlobalSession::Session::V3'
       array, sig = GlobalSession::Session::V3.decode_cookie(cookie)
       array[6] = insecure_attributes
       json = GlobalSession::Encoding::JSON.dump(array)
       bin = GlobalSession::Session::V3.join_body(json, sig)
       zbin = bin
-    elsif klass == GlobalSession::Session::V2
+    when 'GlobalSession::Session::V2'
       bin = zbin
       array = GlobalSession::Encoding::Msgpack.load(bin)
       array[5] = insecure_attributes
       bin = GlobalSession::Encoding::Msgpack.dump(array)
       zbin = bin
-    elsif klass == GlobalSession::Session::V1
+    when 'GlobalSession::Session::V1'
       bin = Zlib::Inflate.inflate(zbin)
       hash = GlobalSession::Encoding::JSON.load(bin)
       hash['dx'] = insecure_attributes
       bin = GlobalSession::Encoding::JSON.dump(hash)
       zbin = Zlib::Deflate.deflate(bin, Zlib::BEST_COMPRESSION)
     else
-      raise RuntimeError, "Don't know how to tamper with a #{described_class}"
+      raise RuntimeError, "Don't know how to tamper with a #{subject}"
     end
 
     GlobalSession::Encoding::Base64Cookie.dump(zbin)

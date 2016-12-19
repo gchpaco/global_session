@@ -22,7 +22,7 @@
 # Standard library dependencies
 require 'set'
 
-# Cryptographical Hash
+# SignedHash, which encapsulates the crypto bit of global sessions
 require 'right_support/crypto'
 
 module GlobalSession::Session
@@ -47,6 +47,9 @@ module GlobalSession::Session
   # encoding (instead of msgpack), and uses the undocumented OpenSSL::PKey#sign and #verify
   # operations which rely on the PKCS7-compliant OpenSSL EVP API.
   class V3 < Abstract
+    # Pattern that matches strings that are probably a V3 session cookie.
+    HEADER = /^WzM/
+
     STRING_ENCODING = !!(RUBY_VERSION !~ /1.8/)
 
     # Utility method to decode a cookie; good for console debugging. This performs no
@@ -110,33 +113,6 @@ module GlobalSession::Session
       result
     end
 
-    # Delete a key from the global session attributes. If the key exists,
-    # mark the global session dirty
-    #
-    # @param [String] the key to delete
-    # @return [Object] the value of the key deleted, or nil if not found
-    def delete(key)
-      key = key.to_s #take care of symbol-style keys
-      raise GlobalSession::InvalidSession unless valid?
-
-      if @schema_signed.include?(key)
-        authority_check
-
-        # Only mark dirty if the key actually exists
-        @dirty_secure = true if @signed.keys.include? key
-        value = @signed.delete(key)
-      elsif @schema_insecure.include?(key)
-
-        # Only mark dirty if the key actually exists
-        @dirty_insecure = true if @insecure.keys.include? key
-        value = @insecure.delete(key)
-      else
-        raise ArgumentError, "Attribute '#{key}' is not specified in global session configuration"
-      end
-
-      return value
-    end
-
     # Serialize the session to a form suitable for use with HTTP cookies. If any
     # secure attributes have changed since the session was instantiated, compute
     # a fresh RSA signature.
@@ -168,9 +144,9 @@ module GlobalSession::Session
         hash['a'] = authority
         signed_hash = RightSupport::Crypto::SignedHash.new(
           hash,
-          :envelope=>true,
-          :encoding=>GlobalSession::Encoding::JSON,
-          :private_key=>@directory.private_key)
+          @directory.private_key,
+          envelope: true,
+          encoding: GlobalSession::Encoding::JSON)
         @signature = signed_hash.sign(@expired_at)
       end
 
@@ -181,13 +157,6 @@ module GlobalSession::Session
       json = GlobalSession::Encoding::JSON.dump(array)
       bin = self.class.join_body(json, @signature)
       return GlobalSession::Encoding::Base64Cookie.dump(bin)
-    end
-
-    # Determine whether any state has changed since the session was loaded.
-    #
-    # @return [Boolean] true if something has changed
-    def dirty?
-      !!(super || @dirty_secure || @dirty_insecure)
     end
 
     # Return the keys that are currently present in the global session.
@@ -218,52 +187,6 @@ module GlobalSession::Session
       @insecure.each_pair(&block)
     end
 
-    # Lookup a value by its key.
-    #
-    # === Parameters
-    # key(String):: the key
-    #
-    # === Return
-    # value(Object):: The value associated with +key+, or nil if +key+ is not present
-    def [](key)
-      key = key.to_s #take care of symbol-style keys
-      @signed[key] || @insecure[key]
-    end
-
-    # Set a value in the global session hash. If the supplied key is denoted as
-    # secure by the global session schema, causes a new signature to be computed
-    # when the session is next serialized.
-    #
-    # === Parameters
-    # key(String):: The key to set
-    # value(Object):: The value to set
-    #
-    # === Return
-    # value(Object):: Always returns the value that was set
-    #
-    # ===Raise
-    # InvalidSession:: if the session has been invalidated (and therefore can't be written to)
-    # ArgumentError:: if the configuration doesn't define the specified key as part of the global session
-    # NoAuthority:: if the specified key is secure and the local node is not an authority
-    # UnserializableType:: if the specified value can't be serialized as JSON
-    def []=(key, value)
-      key = key.to_s #take care of symbol-style keys
-      raise GlobalSession::InvalidSession unless valid?
-
-      if @schema_signed.include?(key)
-        authority_check
-        @signed[key] = value
-        @dirty_secure = true
-      elsif @schema_insecure.include?(key)
-        @insecure[key] = value
-        @dirty_insecure = true
-      else
-        raise ArgumentError, "Attribute '#{key}' is not specified in global session configuration"
-      end
-
-      return value
-    end
-
     # Return the SHA1 hash of the most recently-computed RSA signature of this session.
     # This isn't really intended for the end user; it exists so the Web framework integration
     # code can optimize request speed by caching the most recently verified signature in the
@@ -276,16 +199,6 @@ module GlobalSession::Session
     end
 
     private
-
-    # This is called by #clone and is used to augment the shallow clone behavior
-    #
-    # @return [Object] this global session object which doesn't reference the
-    # the hashes from the original object
-    def initialize_copy(source)
-      super
-      @signed = ::RightSupport::Data::HashTools.deep_clone2(@signed)
-      @insecure = ::RightSupport::Data::HashTools.deep_clone2(@insecure)
-    end
 
     def load_from_cookie(cookie) # :nodoc:
       hash = nil
@@ -311,9 +224,9 @@ module GlobalSession::Session
       if @directory.trusted_authority?(authority)
         signed_hash = RightSupport::Crypto::SignedHash.new(
           hash,
+          @directory.authorities[authority],
           :envelope=>true,
-          :encoding=>GlobalSession::Encoding::JSON,
-          :public_key=>@directory.authorities[authority])
+          :encoding=>GlobalSession::Encoding::JSON)
 
         begin
           signed_hash.verify!(signature, expired_at)
@@ -349,23 +262,12 @@ module GlobalSession::Session
     end
 
     def create_from_scratch # :nodoc:
-      authority_check
-
       @signed = {}
       @insecure = {}
       @created_at = Time.now.utc
       @authority = @directory.local_authority_name
       @id = RightSupport::Data::UUID.generate
       renew!
-    end
-
-    def create_invalid # :nodoc:
-      @id = nil
-      @created_at = Time.now.utc
-      @expired_at = created_at
-      @signed = {}
-      @insecure = {}
-      @authority = nil
     end
 
     # Transform a V1-style attribute hash to an Array with fixed placement for

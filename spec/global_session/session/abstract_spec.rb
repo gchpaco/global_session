@@ -14,13 +14,61 @@ describe GlobalSession::Session::Abstract do
     @key_factory.destroy
   end
 
-  # Abstract#initialize can't be invoked directly, so we test its subclasses
-  # instead. We do the reflection ourselves to avoid relying on ActiveSupport (Class#subclasses)
-  descendants = []
-  ObjectSpace.each_object(Class) do |k|
-    descendants.unshift k if k < GlobalSession::Session::Abstract
+  context '#generate_id' do
+    let(:configuration) { {'attributes' => {'signed' => []}, 'timeout' => 3} }
+    let(:directory) { flexmock(GlobalSession::Directory, configuration:configuration, local_authority_name:'todd') }
+    subject { GlobalSession::Session::V4 }
+
+    it 'makes unpredictable session IDs' do
+        uuids = []
+        pos_to_freq = {}
+
+        1_000.times do
+          uuids << subject.new(directory).id
+        end
+
+        uuids.each do |uuid|
+          pos = 0
+          uuid.each_char do |char|
+            pos_to_freq[pos] ||= {}
+            pos_to_freq[pos][char] ||= 0
+            pos_to_freq[pos][char] += 1
+            pos += 1
+          end
+        end
+
+        predictable_pos = 0
+        total_pos       = 0
+
+        pos_to_freq.each_pair do |pos, frequencies|
+          n    = frequencies.size.to_f
+          total  = frequencies.values.inject(0) { |x, v| x+v }.to_f
+          mean = total / n
+
+          sum_diff_sq = 0.0
+          frequencies.each_pair do |char, count|
+            sum_diff_sq += (count - mean)**2
+          end
+          var = (1 / n) * sum_diff_sq
+          std_dev = Math.sqrt(var)
+
+          predictable_pos += 1 if std_dev == 0.0
+          total_pos += 1
+        end
+
+        # None of the character positions should be predictable
+        expect(predictable_pos).to eq(0)
+      end
   end
-  descendants.each do |klass|
+
+  # Find all version-specific subclasses and test that they do useful things.
+  DESCENDENTS = []
+  ObjectSpace.each_object(Class) do |k|
+    DESCENDENTS.unshift k if k < GlobalSession::Session::Abstract
+  end
+  DESCENDENTS.freeze
+
+  DESCENDENTS.each do |klass|
     context "given a valid serialized #{klass}" do
       let(:subclass) { klass }
       before(:each) do

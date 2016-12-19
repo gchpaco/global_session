@@ -21,6 +21,6 @@ Gem::Specification.new do |spec|
 
   spec.add_runtime_dependency('json', ['~> 1.4'])
   spec.add_runtime_dependency('rack-contrib', ['~> 1.0'])
-  spec.add_runtime_dependency('right_support', ['< 4.0', '>= 2.8.2'])
+  spec.add_runtime_dependency('right_support', ['>= 2.14.1', '< 3.0'])
   spec.add_runtime_dependency('simple_uuid', ['>= 0.2.0'])
 end

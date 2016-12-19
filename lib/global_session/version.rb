@@ -1,3 +1,3 @@
 module GlobalSession
-  VERSION = '3.3.0'
+  VERSION = '4.0.0rc1'
 end

@@ -44,6 +44,9 @@ module GlobalSession::Session
   # * The sign and verify algorithms, while safe, do not comply fully with PKCS7; they rely on the
   #   OpenSSL low-level crypto API instead of using the higher-level EVP (envelope) API.
   class V2 < Abstract
+    # Pattern that matches strings that are probably a V2 session cookie.
+    HEADER = /^l9/
+
     # Utility method to decode a cookie; good for console debugging. This performs no
     # validation or security check of any sort.
     #
@@ -79,8 +82,8 @@ module GlobalSession::Session
         hash['a'] = authority
         signed_hash = RightSupport::Crypto::SignedHash.new(
             hash.reject { |k,v| ['dx', 's'].include?(k) },
-            :encoding=>GlobalSession::Encoding::Msgpack,
-            :private_key=>@directory.private_key)
+            @directory.private_key,
+            encoding: GlobalSession::Encoding::Msgpack)
         @signature = signed_hash.sign(@expired_at)
       end
 
@@ -257,8 +260,8 @@ module GlobalSession::Session
 
       signed_hash = RightSupport::Crypto::SignedHash.new(
           hash.reject { |k,v| ['dx', 's'].include?(k) },
-          :encoding=>GlobalSession::Encoding::Msgpack,
-          :public_key=>@directory.authorities[authority])
+          @directory.authorities[authority],
+          :encoding=>GlobalSession::Encoding::Msgpack)
 
       begin
         signed_hash.verify!(signature, expired_at)
@@ -285,23 +288,12 @@ module GlobalSession::Session
     end
 
     def create_from_scratch # :nodoc:
-      authority_check
-
       @signed = {}
       @insecure = {}
       @created_at = Time.now.utc
       @authority = @directory.local_authority_name
       @id = RightSupport::Data::UUID.generate
       renew!
-    end
-
-    def create_invalid # :nodoc:
-      @id = nil
-      @created_at = Time.now.utc
-      @expired_at = created_at
-      @signed = {}
-      @insecure = {}
-      @authority = nil
     end
   end
 end

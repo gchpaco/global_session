@@ -75,6 +75,52 @@ module GlobalSession::Session
       @cookie.nil?
     end
 
+    # Lookup a value by its key.
+    #
+    # === Parameters
+    # key(String):: the key
+    #
+    # === Return
+    # value(Object):: The value associated with +key+, or nil if +key+ is not present
+    def [](key)
+      key = key.to_s #take care of symbol-style keys
+      @signed[key] || @insecure[key]
+    end
+
+    # Set a value in the global session hash. If the supplied key is denoted as
+    # secure by the global session schema, causes a new signature to be computed
+    # when the session is next serialized.
+    #
+    # === Parameters
+    # key(String):: The key to set
+    # value(Object):: The value to set
+    #
+    # === Return
+    # value(Object):: Always returns the value that was set
+    #
+    # ===Raise
+    # InvalidSession:: if the session has been invalidated (and therefore can't be written to)
+    # ArgumentError:: if the configuration doesn't define the specified key as part of the global session
+    # NoAuthority:: if the specified key is secure and the local node is not an authority
+    # UnserializableType:: if the specified value can't be serialized as JSON
+    def []=(key, value)
+      key = key.to_s #take care of symbol-style keys
+      raise GlobalSession::InvalidSession unless valid?
+
+      if @schema_signed.include?(key)
+        authority_check
+        @signed[key] = value
+        @dirty_secure = true
+      elsif @schema_insecure.include?(key)
+        @insecure[key] = value
+        @dirty_insecure = true
+      else
+        raise ArgumentError, "Attribute '#{key}' is not specified in global session configuration"
+      end
+
+      return value
+    end
+
     # Determine whether the session is valid. This method simply delegates to the
     # directory associated with this session.
     #
@@ -88,7 +134,7 @@ module GlobalSession::Session
     #
     # @return [Boolean] true if something has changed
     def dirty?
-      !!(new_record? || @dirty_timestamps)
+      !!(new_record? || @dirty_timestamps || @dirty_secure || @dirty_insecure)
     end
 
     # Determine whether the global session schema allows a given key to be placed
@@ -116,6 +162,34 @@ module GlobalSession::Session
 
     alias key? has_key?
 
+    # Delete a key from the global session attributes. If the key exists,
+    # mark the global session dirty
+    #
+    # @param [String] the key to delete
+    # @return [Object] the value of the key deleted, or nil if not found
+    def delete(key)
+      key = key.to_s #take care of symbol-style keys
+      raise GlobalSession::InvalidSession unless valid?
+
+      if @schema_signed.include?(key)
+        authority_check
+
+        # Only mark dirty if the key actually exists
+        @dirty_secure = true if @signed.keys.include? key
+        value = @signed.delete(key)
+      elsif @schema_insecure.include?(key)
+
+        # Only mark dirty if the key actually exists
+        @dirty_insecure = true if @insecure.keys.include? key
+        value = @insecure.delete(key)
+      else
+        raise ArgumentError, "Attribute '#{key}' is not specified in global session configuration"
+      end
+
+      return value
+    end
+
+
     # Invalidate this session by reporting its UUID to the Directory.
     #
     # === Return
@@ -140,6 +214,10 @@ module GlobalSession::Session
 
     private
 
+    def generate_id
+      RightSupport::Data::Base64URL.encode(SecureRandom.random_bytes(8))
+    end
+
     def authority_check # :nodoc:
       unless @directory.local_authority_name
         raise GlobalSession::NoAuthority, 'Cannot change secure session attributes; we are not an authority'
@@ -155,7 +233,20 @@ module GlobalSession::Session
     end
 
     def create_invalid
-      raise NotImplementedError, "Subclass responsibility"
+      @id = nil
+      @created_at = Time.now.utc
+      @expired_at = created_at
+      @signed = {}
+      @insecure = {}
+      @authority = nil
+    end
+
+    # This is called by Object#clone and is used to augment our "shallow clone"
+    # behavior so that we don't share state hashes between clones.
+    def initialize_copy(source)
+      super
+      @signed = ::RightSupport::Data::HashTools.deep_clone2(@signed)
+      @insecure = ::RightSupport::Data::HashTools.deep_clone2(@insecure)
     end
   end
 end
