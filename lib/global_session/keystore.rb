@@ -119,7 +119,13 @@ module GlobalSession
       elsif File.file?(path)
         name = File.basename(path, '.*')
         pem  = File.read(path)
-        key  = OpenSSL::PKey.read(pem)
+
+        # Deal with modern ("BEGIN PUBLIC/PRIVATE KEY") and legacy ("BEGIN RSA PUBLIC KEY") formats
+        if pem =~ /BEGIN RSA/
+          key  = OpenSSL::PKey::RSA.new(pem)
+        else
+          key  = OpenSSL::PKey.read(pem)
+        end
 
         # ignore private keys (which legacy config allowed to coexist with public keys)
         unless (key.private? rescue nil) || (key.private_key? rescue nil)

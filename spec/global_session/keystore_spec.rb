@@ -10,4 +10,11 @@ describe GlobalSession::Keystore do
       end
     end
   end
+
+  it 'reads various PEM formats' do
+    fixtures_dir = File.expand_path('../../fixtures', __FILE__)
+    config = {'keystore' => {'public' => fixtures_dir}}
+
+    keystore = GlobalSession::Keystore.new(config)
+  end
 end
