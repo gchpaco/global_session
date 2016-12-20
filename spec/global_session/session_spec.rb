@@ -94,7 +94,7 @@ describe GlobalSession::Session do
   end
 
   context '.new' do
-    it "returns a #{CURRENT_CLASS} when cookie is absent" do
+    it "returns a V#{CURRENT_MAJOR} when cookie is absent" do
       s = GlobalSession::Session.new(@directory)
       expect(s).to be_a(CURRENT_CLASS)
     end

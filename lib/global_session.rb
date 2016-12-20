@@ -27,24 +27,26 @@ module GlobalSession
   # The general category of client-side errors. Used solely as a base class.
   class ClientError < Exception; end
 
-  # Indicates that the global session configuration file is missing from disk.
+  # Global session configuration is missing from the environment or filesystem.
   #
   class MissingConfiguration < ConfigurationError; end
 
-  # Indicates that a client submitted a request with a valid session cookie, but the
-  # session ID was reported as invalid by the Directory.
+  # The request has a valid session cookie, but the session ID was reported as
+  # invalid by the Directory.
   #
   # See Directory#valid_session? for more information.
   #
   class InvalidSession < ClientError; end
 
-  # Indicates that a client submitted a request with a valid session cookie, but the
-  # session has expired.
+  # The request has a valid session cookie, but the session has expired.
   #
   class ExpiredSession < ClientError; end
 
-  # Indicates that a client submitted a request with a session cookie that could not
-  # be decoded or decompressed.
+  # The request has a valid session cookie, but the session has expired.
+  class PrematureSession < ExpiredSession; end
+
+  # The request has a session cookie, but the cookie is malformed and cannot be
+  # interpreted as session state.
   #
   class MalformedCookie < ClientError
     attr_reader :cookie
@@ -76,6 +78,9 @@ module GlobalSession
   # information.
   #
   class NoAuthority < ConfigurationError; end
+
+  # The request has a session cookie, but its signature is invalid.
+  class InvalidSignature < SecurityError; end
 end
 
 #Make sure gem dependencies are activated.

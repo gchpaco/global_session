@@ -108,14 +108,16 @@ module GlobalSession
     # InvalidSession:: if the session contained in the cookie has been invalidated
     # ExpiredSession:: if the session contained in the cookie has expired
     # MalformedCookie:: if the cookie was corrupt or malformed
-    # SecurityError:: if signature is invalid or cookie is not signed by a trusted authority
+    # InvalidSignature:: if signature is invalid or cookie is not signed by a trusted authority
     def create_session(cookie=nil)
       forced_version = configuration['cookie']['version']
 
       if cookie.nil?
         # Create a legitimately new session
         case forced_version
-        when 3, nil
+        when 4
+          Session::V4.new(self, cookie)
+        when nil, 3
           Session::V3.new(self, cookie)
         when 2
           Session::V2.new(self, cookie)
@@ -142,7 +144,7 @@ module GlobalSession
     # InvalidSession:: if the session contained in the cookie has been invalidated
     # ExpiredSession:: if the session contained in the cookie has expired
     # MalformedCookie:: if the cookie was corrupt or malformed
-    # SecurityError:: if signature is invalid or cookie is not signed by a trusted authority
+    # InvalidSignature:: if signature is invalid or cookie is not signed by a trusted authority
     def load_session(cookie)
       Session.new(self, cookie)
     end

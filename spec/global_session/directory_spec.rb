@@ -60,6 +60,8 @@ describe GlobalSession::Directory do
   end
 
   context :create_session do
+    CURRENT_MAJOR = Integer(GlobalSession::VERSION.split('.').first)
+
     before(:each) do
       @authority_name = "authority#{rand(2**16)}"
       mock_config('test/authority', @authority_name)
@@ -68,38 +70,23 @@ describe GlobalSession::Directory do
     end
 
     context 'given a configuration that does not specify cookie/version' do
-      it 'creates a V3 session' do
-        expect(@directory.create_session).to be_a(GlobalSession::Session::V3)
+      klass_name = "V#{CURRENT_MAJOR}"
+      let(:klass) { GlobalSession::Session.const_get(klass_name.to_sym) }
+      it "creates a #{klass_name} session" do
+        expect(@directory.create_session).to be_a(klass)
       end
     end
 
-    context 'given a configuration that contains cookie/version=3' do
-      before(:each) do
-        mock_config('test/cookie/version', 3)
-      end
-
-      it 'creates a V3 session' do
-        expect(@directory.create_session).to be_a(GlobalSession::Session::V3)
-      end
-    end
-
-    context 'given a configuration that contains cookie/version=2' do
-      before(:each) do
-        mock_config('test/cookie/version', 2)
-      end
-
-      it 'creates a V2 session' do
-        expect(@directory.create_session).to be_a(GlobalSession::Session::V2)
-      end
-    end
-
-    context 'given a configuration that contains cookie/version=1' do
-      before(:each) do
-        mock_config('test/cookie/version', 1)
-      end
-
-      it 'creates a V1 session' do
-        expect(@directory.create_session).to be_a(GlobalSession::Session::V1)
+    (1..CURRENT_MAJOR).each do |v|
+      context "given a configuration that contains cookie/version=#{v}" do
+        klass_name = "V#{v}"
+        before(:each) do
+          mock_config('test/cookie/version', v)
+        end
+        let(:klass) { GlobalSession::Session.const_get(klass_name.to_sym) }
+        it "creates a #{klass_name} session" do
+          expect(@directory.create_session).to be_a(klass)
+        end
       end
     end
   end

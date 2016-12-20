@@ -1,7 +1,11 @@
+require 'jwt'
+
 require 'spec_helper'
 
-# Depends on the following lets:
-#     signature_method: either :private_encrypt or :sign
+# Depends on the following `let`s:
+#     key_generation_parameter: one of [1024, 2048, 'prime256v1']
+#     signature_method: one of [:dsa_sign_asn1, :sign]
+#     approximate_token_size: Integer byte size of tokens
 shared_examples_for 'all subclasses of Session::Abstract' do
   include SpecHelper
 
@@ -53,10 +57,10 @@ shared_examples_for 'all subclasses of Session::Abstract' do
       before do
         @cookie = tamper_with_signed_attributes(subject, @cookie, {'evil_haxor' => 'mwahaha'})
       end
-      it 'raises SecurityError' do
+      it 'raises InvalidSignature' do
         expect {
           subject.new(@directory, @cookie)
-        }.to raise_error(SecurityError)
+        }.to raise_error(GlobalSession::InvalidSignature)
       end
     end
 
@@ -69,10 +73,10 @@ shared_examples_for 'all subclasses of Session::Abstract' do
         mock_config('test/trust', ['authority2'])
         mock_config('test/authority', nil)
       end
-      it 'raises SecurityError' do
+      it 'raises InvalidSignature' do
         expect {
           subject.new(@directory, @cookie)
-        }.to raise_error(SecurityError)
+        }.to raise_error(GlobalSession::InvalidSignature)
       end
     end
 
@@ -248,6 +252,146 @@ shared_examples_for 'all subclasses of Session::Abstract' do
           expect(@session['user']).to eq('bar')
         end
       end
+    end
+  end
+end
+
+# Depends on the following `let`s:
+#     algorithm_identifier: ES256, RSA256, etc
+#     key_generation_parameter: one of [1024, 2048, 'prime256v1']
+#     ... TODO ...
+shared_examples_for 'JWT compatible subclasses of Session::Abstract' do
+  include SpecHelper
+
+  let(:trusted_issuer) { "my-#{algorithm_identifier}" }
+
+  let(:key_factory) { KeyFactory.new }
+  before do
+    key_factory.create(trusted_issuer, true, parameter:key_generation_parameter)
+    key_factory.create('untrusted', true, parameter:key_generation_parameter)
+    FileUtils.rm(File.join(key_factory.dir, 'untrusted.pub'))
+  end
+  after do
+    key_factory.destroy
+  end
+
+  let(:configuration) do
+    {
+      'attributes' => {
+        'signed' => ['sub']
+      },
+      'keystore' => {
+        'public' => key_factory.dir,
+        'private' => File.join(key_factory.dir, "#{trusted_issuer}.key"),
+      },
+      'timeout' => 60,
+    }
+  end
+
+  let(:directory) { GlobalSession::Directory.new(configuration) }
+
+  let(:trusted_public_key) do
+    directory.keystore.public_keys[trusted_issuer]
+  end
+
+  let(:trusted_private_key) do
+    directory.keystore.private_key
+  end
+
+  let(:untrusted_private_key) do
+    OpenSSL::PKey.read(File.read(File.join(key_factory.dir, 'untrusted.key')))
+  end
+
+  context '#initialize' do
+    let(:now) { Time.now }
+    let(:expire_at) { now + 60 }
+
+    let(:jwt_payload) do
+      {
+        'iat' => now.to_i,
+        'exp' => expire_at.to_i,
+        'iss' => trusted_public_key,
+      }
+    end
+
+    let(:valid_jwt) do
+      data = {'iss' => trusted_issuer, 'sub' => 'jwt joe'}
+      JWT.encode(jwt_payload.merge(data),
+                 trusted_private_key,
+                 algorithm_identifier)
+    end
+
+    let(:expired_jwt) do
+      data = {'iss' => trusted_issuer, 'sub' => 'jwt joe', 'exp' => Integer(now - 300)}
+      JWT.encode(jwt_payload.merge(data),
+                 trusted_private_key,
+                 algorithm_identifier)
+    end
+
+
+    let(:premature_jwt) do
+      data = {'iss' => trusted_issuer, 'sub' => 'jwt joe', 'nbf' => Integer(now + 10)}
+      JWT.encode(jwt_payload.merge(data),
+                 trusted_private_key,
+                 algorithm_identifier)
+    end
+
+    let(:forged_jwt) do
+      data = {'iss' => trusted_issuer, 'sub' => 'jwt joe'}
+      JWT.encode(jwt_payload.merge(data),
+                 untrusted_private_key,
+                 algorithm_identifier)
+    end
+
+    let(:untrusted_jwt) do
+      data = {'iss' => 'untrusted', 'sub' => 'jwt joe'}
+      JWT.encode(jwt_payload.merge(data),
+                 untrusted_private_key,
+                 algorithm_identifier)
+    end
+
+    it 'accepts valid JWTs with suitable issuer' do
+      session = subject.new(directory, valid_jwt)
+      expect(session['sub']).to eq('jwt joe')
+      expect(session.created_at).to be_within(1).of(now)
+      expect(session.expired_at).to be_within(1).of(expire_at)
+    end
+
+    it 'rejects expired JWTs' do
+      expect {
+        subject.new(directory, expired_jwt)
+      }.to raise_error(GlobalSession::ExpiredSession)
+    end
+
+    it 'rejects not-yet-valid JWTs' do
+      expect {
+        subject.new(directory, premature_jwt)
+      }.to raise_error(GlobalSession::PrematureSession)
+    end
+
+    it 'rejects JWTs with unknown issuer' do
+      expect {
+        subject.new(directory, forged_jwt)
+      }.to raise_error(GlobalSession::InvalidSignature)
+    end
+
+    it 'rejects JWTs with unknown issuer' do
+      expect {
+        subject.new(directory, untrusted_jwt)
+      }.to raise_error(GlobalSession::InvalidSignature)
+    end
+  end
+
+  context '#to_s' do
+    it 'returns a valid, signed JWT' do
+      session = subject.new(directory)
+      session['sub'] = 'joe schmoe'
+
+      payload, header = JWT.decode(session.to_s, trusted_public_key)
+      expect(header).to eq({'typ'=>'JWT', 'alg'=>algorithm_identifier})
+      expect(payload['sub']).to eq(session['sub'])
+      expect(payload['iat']).to eq(session.created_at.to_i)
+      expect(payload['exp']).to eq(session.expired_at.to_i)
     end
   end
 end

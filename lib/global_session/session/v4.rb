@@ -2,9 +2,14 @@ require 'securerandom'
 
 module GlobalSession::Session
   # Version 4 is based on JSON Web Token; in fact, if there is no insecure
-  # state, then a V4 session _is_ a JWT. Otherwise, it's a JWT with a fourth
-  # component on the end, containing the insecure state.
+  # state, then a V4 session _is_ a JWT. Otherwise, it's a JWT with a
+  # nonstandard fourth component containing the insecure state.
   class V4 < Abstract
+    EXPIRED_AT = 'exp'.freeze
+    ISSUED_AT  = 'iat'.freeze
+    ISSUER     = 'iss'.freeze
+    NOT_BEFORE = 'nbf'.freeze
+
     # Pattern that matches strings that are probably a V4 session cookie.
     HEADER = /^eyJ0eXAiOiJKV1QiL/
 
@@ -51,8 +56,9 @@ module GlobalSession::Session
         authority_check
 
         payload = @signed.dup
-        payload['iat'] = @created_at.to_i
-        payload['iss'] = @directory.local_authority_name
+        payload[EXPIRED_AT] = @expired_at.to_i
+        payload[ISSUED_AT] = @created_at.to_i
+        payload[ISSUER] = @directory.local_authority_name
 
         sh = RightSupport::Crypto::SignedHash.new(payload, @directory.private_key, envelope: :jwt)
         jwt = sh.to_jwt(@expired_at)
@@ -70,13 +76,18 @@ module GlobalSession::Session
     def load_from_cookie(cookie)
       # Get the basic facts
       header, payload, sig, insec = self.class.decode_cookie(cookie)
-      created_at = payload['iat']
-      issuer     = payload['iss']
-      expired_at = payload['exp']
-      raise SecurityError, "JWT iat claim missing/wrong" unless Integer === created_at
-      raise SecurityError, "JWT iat claim missing/wrong" unless Integer === expired_at
+      created_at = payload[ISSUED_AT]
+      issuer     = payload[ISSUER]
+      expired_at = payload[EXPIRED_AT]
+      not_before = payload[NOT_BEFORE]
+      raise GlobalSession::InvalidSignature, "JWT iat claim missing/wrong" unless Integer === created_at
+      raise GlobalSession::InvalidSignature, "JWT iat claim missing/wrong" unless Integer === expired_at
       created_at = Time.at(created_at)
       expired_at = Time.at(expired_at)
+      if Numeric === not_before
+        not_before = Time.at(not_before)
+        raise GlobalSession::PrematureSession, "Session not valid before #{not_before}" unless Time.now >= not_before
+      end
 
       #Check trust in signing authority
       if @directory.trusted_authority?(issuer)
@@ -91,11 +102,11 @@ module GlobalSession::Session
         rescue RightSupport::Crypto::ExpiredSignature
           raise GlobalSession::ExpiredSession, "Session expired at #{expired_at}"
         rescue RightSupport::Crypto::InvalidSignature => e
-          raise SecurityError, "Global session signature verification failed: " + e.message
+          raise GlobalSession::InvalidSignature, "Global session signature verification failed: " + e.message
         end
 
       else
-        raise SecurityError, "Global sessions signed by #{authority.inspect} are not trusted"
+        raise GlobalSession::InvalidSignature, "Global sessions signed by #{authority.inspect} are not trusted"
       end
 
       #Check other validity (delegate to directory)

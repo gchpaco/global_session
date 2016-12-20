@@ -6,8 +6,23 @@ describe GlobalSession::Session::V4 do
 
   include SpecHelper
 
-  let(:key_generation_parameter) { 'prime256v1' }
-  let(:signature_method) { :dsa_sign_asn1 }
-  let(:approximate_token_size) { 196 }
-  it_should_behave_like 'all subclasses of Session::Abstract'
+  context 'given an EC key' do
+    let(:key_generation_parameter) { 'prime256v1' }
+    let(:signature_method) { :dsa_sign_asn1 }
+    let(:approximate_token_size) { 190 }
+    it_should_behave_like 'all subclasses of Session::Abstract'
+
+    let(:algorithm_identifier) { 'ES256' }
+    it_should_behave_like 'JWT compatible subclasses of Session::Abstract'
+  end
+
+  context 'given an RSA key' do
+    let(:key_generation_parameter) { 1024 }
+    let(:signature_method) { :dsa_sign_asn1 }
+    let(:approximate_token_size) { 260 }
+    it_should_behave_like 'all subclasses of Session::Abstract'
+
+    let(:algorithm_identifier) { 'RS256' }
+    it_should_behave_like 'JWT compatible subclasses of Session::Abstract'
+  end
 end

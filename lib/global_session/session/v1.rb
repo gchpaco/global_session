@@ -236,15 +236,15 @@ module GlobalSession::Session
       #Check signature
       expected = canonical_digest(hash)
       signer = @directory.authorities[authority]
-      raise SecurityError, "Unknown signing authority #{authority}" unless signer
+      raise GlobalSession::InvalidSignature, "Unknown signing authority #{authority}" unless signer
       got = signer.public_decrypt(GlobalSession::Encoding::Base64Cookie.load(signature))
       unless (got == expected)
-        raise SecurityError, "Signature mismatch on global session cookie; tampering suspected"
+        raise GlobalSession::InvalidSignature, "Global session integrity failure; tampering suspected"
       end
 
       #Check trust in signing authority
       unless @directory.trusted_authority?(authority)
-        raise SecurityError, "Global sessions signed by #{authority} are not trusted"
+        raise GlobalSession::InvalidSignature, "Global sessions signed by #{authority} are not trusted"
       end
 
       #Check expiration

@@ -14,7 +14,7 @@ module GlobalSession::Session
     # InvalidSession:: if the session contained in the cookie has been invalidated
     # ExpiredSession:: if the session contained in the cookie has expired
     # MalformedCookie:: if the cookie was corrupt or malformed
-    # SecurityError:: if signature is invalid or cookie is not signed by a trusted authority
+    # InvalidSignature:: if signature is invalid or cookie is not signed by a trusted authority
     def initialize(directory, cookie=nil)
       @directory = directory
       @signed = {}

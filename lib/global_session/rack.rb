@@ -298,7 +298,7 @@ module GlobalSession
           env['rack.logger'].error(msg)
         end
 
-        if e.is_a?(ClientError) || e.is_a?(SecurityError)
+        if e.is_a?(ClientError) || e.is_a?(InvalidSignature)
           env['global_session.error'] = e
           wipe_cookie(env)
         elsif e.is_a? ConfigurationError

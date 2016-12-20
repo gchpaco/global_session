@@ -43,9 +43,9 @@ module GlobalSession::Session
   # @return [Class] implementation class that can probably deserialize cookie
   def self.guess_version(cookie)
     case cookie
-    when nil, V4::HEADER
+    when V4::HEADER
       V4
-    when V3::HEADER
+    when nil, V3::HEADER
       V3
     when V2::HEADER
       V2
