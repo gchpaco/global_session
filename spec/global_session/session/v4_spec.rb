@@ -9,7 +9,7 @@ describe GlobalSession::Session::V4 do
   context 'given an EC key' do
     let(:key_generation_parameter) { 'prime256v1' }
     let(:signature_method) { :dsa_sign_asn1 }
-    let(:approximate_token_size) { 190 }
+    let(:approximate_token_size) { 210 }
     it_should_behave_like 'all subclasses of Session::Abstract'
 
     let(:algorithm_identifier) { 'ES256' }
@@ -19,7 +19,7 @@ describe GlobalSession::Session::V4 do
   context 'given an RSA key' do
     let(:key_generation_parameter) { 1024 }
     let(:signature_method) { :dsa_sign_asn1 }
-    let(:approximate_token_size) { 260 }
+    let(:approximate_token_size) { 280 }
     it_should_behave_like 'all subclasses of Session::Abstract'
 
     let(:algorithm_identifier) { 'RS256' }

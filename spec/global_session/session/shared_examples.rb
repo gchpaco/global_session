@@ -40,7 +40,9 @@ shared_examples_for 'all subclasses of Session::Abstract' do
 
     context 'when everything is copacetic' do
       it 'succeeds' do
-        expect(subject.new(@directory, @cookie)).to be_kind_of(GlobalSession::Session::Abstract)
+        loaded = subject.new(@directory, @cookie)
+        expect(loaded).to be_kind_of(GlobalSession::Session::Abstract)
+        expect(loaded.id).to eq(@original_session.id)
       end
     end
 

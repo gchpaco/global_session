@@ -6,6 +6,7 @@ module GlobalSession::Session
   # nonstandard fourth component containing the insecure state.
   class V4 < Abstract
     EXPIRED_AT = 'exp'.freeze
+    ID         = 'id'.freeze
     ISSUED_AT  = 'iat'.freeze
     ISSUER     = 'iss'.freeze
     NOT_BEFORE = 'nbf'.freeze
@@ -56,6 +57,7 @@ module GlobalSession::Session
         authority_check
 
         payload = @signed.dup
+        payload[ID] = id
         payload[EXPIRED_AT] = @expired_at.to_i
         payload[ISSUED_AT] = @created_at.to_i
         payload[ISSUER] = @directory.local_authority_name
@@ -76,6 +78,7 @@ module GlobalSession::Session
     def load_from_cookie(cookie)
       # Get the basic facts
       header, payload, sig, insec = self.class.decode_cookie(cookie)
+      id         = payload[ID]
       created_at = payload[ISSUED_AT]
       issuer     = payload[ISSUER]
       expired_at = payload[EXPIRED_AT]
@@ -115,7 +118,7 @@ module GlobalSession::Session
       end
 
       #If all validation stuff passed, assign our instance variables.
-      @id = payload['id']
+      @id = id
       @authority = issuer
       @created_at = created_at
       @expired_at = expired_at
