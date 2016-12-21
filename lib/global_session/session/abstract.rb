@@ -75,6 +75,34 @@ module GlobalSession::Session
       @cookie.nil?
     end
 
+    # Return the keys that are currently present in the global session.
+    #
+    # === Return
+    # keys(Array):: List of keys contained in the global session
+    def keys
+      @signed.keys + @insecure.keys
+    end
+
+    # Return the values that are currently present in the global session.
+    #
+    # === Return
+    # values(Array):: List of values contained in the global session
+    def values
+      @signed.values + @insecure.values
+    end
+
+    # Iterate over each key/value pair
+    #
+    # === Block
+    # An iterator which will be called with each key/value pair
+    #
+    # === Return
+    # Returns the value of the last expression evaluated by the block
+    def each_pair(&block) # :yields: |key, value|
+      @signed.each_pair(&block)
+      @insecure.each_pair(&block)
+    end
+
     # Lookup a value by its key.
     #
     # === Parameters
