@@ -19,7 +19,7 @@ module GlobalSession::Session
       header, payload, insec = [header, payload, insec].
         map { |c| c && RightSupport::Data::Base64URL.decode(c) }.
         map { |j| j && GlobalSession::Encoding::JSON.load(j) }
-      sig = RightSupport::Data::Base64URL.decode(sig)
+      sig = sig && RightSupport::Data::Base64URL.decode(sig)
       insec ||= {}
 
       unless Hash === header && header['typ'] == 'JWT'
