@@ -12,7 +12,7 @@ module GlobalSession::Session
     NOT_BEFORE = 'nbf'.freeze
 
     # Pattern that matches strings that are probably a V4 session cookie.
-    HEADER = /^eyJ0eXAiOiJKV1QiL/
+    HEADER = /^eyJ/
 
     def self.decode_cookie(cookie)
       header, payload, sig, insec = cookie.split('.')
