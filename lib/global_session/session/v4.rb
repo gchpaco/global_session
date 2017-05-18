@@ -92,22 +92,27 @@ module GlobalSession::Session
         raise GlobalSession::PrematureSession, "Session not valid before #{not_before}" unless Time.now >= not_before
       end
 
-      #Check trust in signing authority
+      # Check trust in signing authority
       if @directory.trusted_authority?(issuer)
-        signed_hash =
-          RightSupport::Crypto::SignedHash.new(payload,
-            @directory.authorities[issuer],
-            envelope: :jwt
-          )
-
-        begin
-          signed_hash.verify!(sig, expired_at)
-        rescue RightSupport::Crypto::ExpiredSignature
-          raise GlobalSession::ExpiredSession, "Session expired at #{expired_at}"
-        rescue RightSupport::Crypto::InvalidSignature => e
-          raise GlobalSession::InvalidSignature, "Global session signature verification failed: " + e.message
+        # Verify the signature
+        key = @directory.authorities[issuer]
+        digest_klass = digest_for_key(key)
+        plaintext = cookie.split('.')[0..1].join('.')
+        if key.respond_to?(:dsa_verify_asn1)
+          # DSA signature with JWT-compatible encoding
+          digest = digest_klass.new.update(plaintext).digest
+          signature = raw_to_asn1(sig, key)
+          result = key.dsa_verify_asn1(digest, signature)
+          raise GlobalSession::InvalidSignature, "Global session signature verification failed: Signature mismatch: DSA verify failed" unless result
+        elsif key.respond_to?(:verify)
+          digest = digest_klass.new
+          result = key.verify(digest, sig, plaintext)
+          raise GlobalSession::InvalidSignature, "Global session signature verification failed: Signature mismatch: verify failed" unless result
+        else
+          raise NotImplementedError, "Cannot verify JWT with #{key.class.name}"
         end
-
+        # Check expiration
+        raise GlobalSession::ExpiredSession, "Session expired at #{expired_at}" unless expired_at >= Time.now
       else
         raise GlobalSession::InvalidSignature, "Global sessions signed by #{authority.inspect} are not trusted"
       end
@@ -126,6 +131,40 @@ module GlobalSession::Session
       @insecure = insec
       @signature = sig
       @cookie = cookie
+    end
+
+    # Returns the digest class used for the given key type
+    #
+    # @param key [OpenSSL::PKey::PKey] the key used for verifying signatures
+    #
+    # @return [OpenSSL::Digest] the digest class to use
+    def digest_for_key(key)
+      case key
+      when OpenSSL::PKey::DSA
+        OpenSSL::Digest::SHA1
+      when OpenSSL::PKey::EC
+        case key.group.degree
+        when 256 then OpenSSL::Digest::SHA256
+        when 384 then OpenSSL::Digest::SHA384
+        when 521 then OpenSSL::Digest::SHA512
+        else
+          raise ArgumentError, "Cannot guess digest"
+        end
+      when OpenSSL::PKey::RSA
+        OpenSSL::Digest::SHA256
+      else
+        OpenSSL::Digest::SHA1
+      end
+    end
+
+    # Convert raw pair of concatenated bignums into ASN1-encoded pair of integers.
+    # This only works for OpenSSL::PKey::EC.
+    # https://github.com/jwt/ruby-jwt/blob/master/lib/jwt.rb#L159
+    def raw_to_asn1(signature, public_key) # :nodoc:
+      byte_size = (public_key.group.degree + 7) / 8
+      r = signature[0..(byte_size - 1)]
+      s = signature[byte_size..-1] || ''
+      OpenSSL::ASN1::Sequence.new([r, s].map { |int| OpenSSL::ASN1::Integer.new(OpenSSL::BN.new(int, 2)) }).to_der
     end
 
     def create_from_scratch
