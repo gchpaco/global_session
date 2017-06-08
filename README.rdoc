@@ -110,11 +110,18 @@ is a fine choice.
 
 Open irb or your console of choice and require the `global_session` gem.
 
-    # default is RSA cryptosystem with 1024-bit keys.
+    # for RSA cryptosystem, do this
     keypair = GlobalSession::Keystore.create_keypair(:RSA, 1024)
     public_pem  = keypair.public_key.to_pem
     private_pem = keypair.to_pem
 
+    # for EC cryptosystem, do this
+    # note missing group parameter; default is 'prime256v2'
+    keypair = GlobalSession::Keystore.create_keypair(:EC)
+    private_pem = keypair.to_pem
+    keypair.private_key = nil
+    public_pem  = keypair.to_pem
+    
     # write keys to disk
     File.open('config/authorities/example-com.pub', 'w') { |f| f.write public_pem }
     File.open('config/authorities/example-com.key', 'w') { |f| f.write private_pem }
