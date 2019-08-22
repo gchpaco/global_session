@@ -22,9 +22,14 @@ module GlobalSession::Session
       sig = sig && RightSupport::Data::Base64URL.decode(sig)
       insec ||= {}
 
-      unless Hash === header && header['typ'] == 'JWT'
-        raise GlobalSession::MalformedCookie, "JWT header not present"
+      unless Hash === header
+        raise GlobalSession::MalformedCookie, "JWT header unexpected format"
       end
+      # typ header is optional, so only
+      if header['typ'] != nil && header['typ'] != 'JWT'
+        raise GlobalSession::MalformedCookie, "Token type is not JWT"
+      end
+
       unless Hash === payload
         raise GlobalSession::MalformedCookie, "JWT payload not present"
       end
