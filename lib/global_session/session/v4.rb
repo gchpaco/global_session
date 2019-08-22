@@ -10,6 +10,7 @@ module GlobalSession::Session
     ISSUED_AT  = 'iat'.freeze
     ISSUER     = 'iss'.freeze
     NOT_BEFORE = 'nbf'.freeze
+    KEY_ID     = 'kid'.freeze
 
     # Pattern that matches strings that are probably a V4 session cookie.
     HEADER = /^eyJ/
@@ -95,6 +96,11 @@ module GlobalSession::Session
       if Numeric === not_before
         not_before = Time.at(not_before)
         raise GlobalSession::PrematureSession, "Session not valid before #{not_before}" unless Time.now >= not_before
+      end
+
+      # if this token was issued by flexera IAM, we will use the "kid" header as the issuer
+      if issuer =~ /^https:\/\/flexeraiam/
+        issuer = header[KEY_ID]
       end
 
       # Check trust in signing authority
