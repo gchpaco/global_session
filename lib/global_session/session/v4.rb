@@ -26,7 +26,7 @@ module GlobalSession::Session
       unless Hash === header
         raise GlobalSession::MalformedCookie, "JWT header unexpected format"
       end
-      # typ header is optional, so only
+      # typ header is optional, so only check if present
       if header['typ'] != nil && header['typ'] != 'JWT'
         raise GlobalSession::MalformedCookie, "Token type is not JWT"
       end
