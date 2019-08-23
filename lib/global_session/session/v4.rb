@@ -10,6 +10,7 @@ module GlobalSession::Session
     ISSUED_AT  = 'iat'.freeze
     ISSUER     = 'iss'.freeze
     NOT_BEFORE = 'nbf'.freeze
+    KEY_ID     = 'kid'.freeze
 
     # Pattern that matches strings that are probably a V4 session cookie.
     HEADER = /^eyJ/
@@ -22,9 +23,14 @@ module GlobalSession::Session
       sig = sig && RightSupport::Data::Base64URL.decode(sig)
       insec ||= {}
 
-      unless Hash === header && header['typ'] == 'JWT'
-        raise GlobalSession::MalformedCookie, "JWT header not present"
+      unless Hash === header
+        raise GlobalSession::MalformedCookie, "JWT header unexpected format"
       end
+      # typ header is optional, so only check if present
+      if header['typ'] != nil && header['typ'] != 'JWT'
+        raise GlobalSession::MalformedCookie, "Token type is not JWT"
+      end
+
       unless Hash === payload
         raise GlobalSession::MalformedCookie, "JWT payload not present"
       end
@@ -90,6 +96,11 @@ module GlobalSession::Session
       if Numeric === not_before
         not_before = Time.at(not_before)
         raise GlobalSession::PrematureSession, "Session not valid before #{not_before}" unless Time.now >= not_before
+      end
+
+      # if this token was issued by flexera IAM, we will use the "kid" header as the issuer
+      if issuer =~ /^https:\/\/flexeraiam/
+        issuer = header[KEY_ID]
       end
 
       # Check trust in signing authority
