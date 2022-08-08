@@ -13,7 +13,7 @@ module GlobalSession::Session
     KEY_ID     = 'kid'.freeze
 
     # Pattern that matches possible Flexera Okta issuers
-    ISSUER_REGEXP = /^https:\/\/secure.flexeratest.com|^https:\/\/secure.flexera.com|^https:\/\/secure.flexera.eu|^https:\/\/secure.flexera.au/
+    ISSUER_REGEXP = /^https:\/\/secure\.flexeratest\.com|^https:\/\/secure\.flexera\.com|^https:\/\/secure\.flexera\.eu|^https:\/\/secure\.flexera\.au/
 
     # Pattern that matches strings that are probably a V4 session cookie.
     HEADER = /^eyJ/
